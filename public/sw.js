@@ -131,6 +131,9 @@ self.addEventListener('fetch', (event) => {
       return; // everything else under /api goes straight to the network
     }
     if (request.mode === 'navigate') {
+      // A Google sign-in redirect carries the authorization code in the query
+      // string. It must reach the network, never the cached app shell.
+      if (url.searchParams.has('code')) return;
       event.respondWith(appShell(request));
       return;
     }

@@ -69,7 +69,16 @@ process.env.NEXT_PUBLIC_SUPABASE_URL = supabaseUrl;
 process.env.SUPABASE_SERVICE_ROLE_KEY = serviceKey;
 
 // Only these files in ./api are reachable. Everything else (helpers, db client) is not.
-const API_ROUTES = new Set(['me', 'services', 'contact', 'categories', 'products', 'orders', 'operations']);
+const API_ROUTES = new Set([
+  'me',
+  'services',
+  'contact',
+  'categories',
+  'products',
+  'orders',
+  'operations',
+  'google-session',
+]);
 
 // Security headers are defined once, in vercel.json, and reused here.
 const headerRules = JSON.parse(fs.readFileSync(path.join(ROOT, 'vercel.json'), 'utf8')).headers ?? [];
@@ -215,6 +224,18 @@ function handleStatic(req, res, url) {
   return serveFile(req, res, index, fs.statSync(index));
 }
 
+function serveGoogleCallback(res) {
+  const file = path.join(DIST, 'google-callback.html');
+  if (!fs.existsSync(file)) return false;
+  const body = fs.readFileSync(file);
+  res.statusCode = 200;
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Content-Length', body.length);
+  res.end(body);
+  return true;
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     for (const h of GLOBAL_HEADERS) res.setHeader(h.key, h.value);
@@ -222,6 +243,9 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url || '/', 'http://localhost');
     if (url.pathname === '/healthz') return sendJson(res, 200, { ok: true });
     if (url.pathname.startsWith('/api/')) return await handleApi(req, res, url);
+    if (url.searchParams.has('code') && url.searchParams.has('state')) {
+      if (serveGoogleCallback(res)) return;
+    }
     return handleStatic(req, res, url);
   } catch (err) {
     console.error('Request failed:', err?.message);

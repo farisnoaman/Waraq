@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Waraq Pro — Google sign-in</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #f6f2e9;
+        color: #0c1f19;
+        font-family: system-ui, sans-serif;
+        padding: 1.5rem;
+        text-align: center;
+      }
+      .card { max-width: 22rem; }
+      h1 { font-size: 1.125rem; margin: 0 0 0.5rem; }
+      p { margin: 0.25rem 0; color: #55665e; font-size: 0.9rem; }
+      .error { color: #b42318; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1 id="headline">Signing you in…</h1>
+      <p id="detail">This window closes automatically.</p>
+    </div>
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var code = params.get('code');
+        var state = params.get('state');
+        var origin = window.location.origin;
+
+        try {
+          var decoded = JSON.parse(atob(state || ''));
+          if (decoded && decoded.origin) origin = decoded.origin;
+        } catch (err) {
+          /* the state is optional for the redirect */
+        }
+
+        function close(message, isError) {
+          var headline = document.getElementById('headline');
+          var detail = document.getElementById('detail');
+          headline.textContent = message;
+          detail.textContent = 'You can close this window.';
+          if (isError) detail.className = 'error';
+          if (window.opener) {
+            window.opener.postMessage(
+              { type: isError ? 'google-auth-denied' : 'google-auth-success', state: state, error: message },
+              origin,
+            );
+          }
+          setTimeout(function () { window.close(); }, 1200);
+        }
+
+        if (!code) {
+          close('Google sign-in was cancelled.', true);
+          return;
+        }
+
+        fetch('/api/google-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: code, redirect_uri: window.location.origin + window.location.pathname }),
+        })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            if (!data.access_token) throw new Error(data.error || 'Google sign-in could not be completed.');
+            if (window.opener) {
+              window.opener.postMessage(
+                {
+                  type: 'google-auth-success',
+                  access_token: data.access_token,
+                  refresh_token: data.refresh_token,
+                  state: state,
+                },
+                origin,
+              );
+            }
+            close('Signed in. You can close this window.');
+          })
+          .catch(function (err) {
+            close(err.message || 'Google sign-in could not be completed.', true);
+          });
+      })();
+    </script>
+  </body>
+</html>
