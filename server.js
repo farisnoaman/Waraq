@@ -13,6 +13,19 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DIST = path.join(ROOT, 'dist');
+
+// Load ./.env for local runs (and for a manually uploaded file on a host).
+// Variables already present in the real environment always win over the file,
+// so the Hostinger panel, Docker `-e`, or a shell export take precedence.
+const ENV_FILE = path.join(ROOT, '.env');
+if (typeof process.loadEnvFile === 'function' && fs.existsSync(ENV_FILE)) {
+  try {
+    process.loadEnvFile(ENV_FILE);
+  } catch (err) {
+    console.warn(`Ignoring ${ENV_FILE}: ${err.message}`);
+  }
+}
+
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
 const MAX_BODY_BYTES = 1024 * 1024;
