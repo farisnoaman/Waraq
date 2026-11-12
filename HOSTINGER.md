@@ -84,11 +84,31 @@ not previously executed.
 | Field | Value |
 |---|---|
 | Site URL | `https://waraq.pro` |
-| Redirect URLs | `https://waraq.pro/**`, `https://waraq.pro/buyer`, `https://waraq.pro/admin`, `http://localhost:5173/**` |
+| Redirect URLs | `https://waraq.pro/**`, `https://waraq.pro/buyer`, `https://waraq.pro/admin`, `http://localhost:3000/**`, `http://127.0.0.1:3000/**` |
 
 Email sign-in works out of the box. Google sign-in is optional; leave
 `VITE_GOOGLE_CLIENT_ID` and `VITE_GOOGLE_AUTH_PROXY` empty to use Supabase's own
 Google provider.
+
+### 1.3a Google sign-in (when the Supabase Google provider is used)
+
+With both `VITE_GOOGLE_*` variables empty the app calls Supabase's Google
+provider, so Google must accept the **Supabase callback** as a redirect target.
+Add this URI in **Google Cloud Console → APIs & Services → Credentials → your
+OAuth client → Authorized redirect URIs**:
+
+```
+https://rhqnxzzrxiqgiayvjmgr.supabase.co/auth/v1/callback
+```
+
+Without it Google answers `Error 400: redirect_uri_mismatch` and the sign-in
+window stops on an "Access blocked" page. The `https://waraq.pro/buyer` entry in
+Google is only used by the optional self-hosted proxy flow
+(`VITE_GOOGLE_AUTH_PROXY`), which this repository does not ship.
+
+In **Supabase → Authentication → Providers → Google**, put the OAuth client id
+and client secret from the Google console, and copy the client's id into
+`VITE_GOOGLE_CLIENT_ID` only if you intend to use the proxy flow.
 
 ### 1.4 Administrator
 
@@ -249,6 +269,12 @@ If it was previously deployed as a static site: unregister the service worker (D
 
 - [ ] `.env` is never committed (confirmed by `git check-ignore .env`).
 - [ ] `.env.example` contains placeholders only — it is public.
+- [ ] **Rotate the Supabase service-role key.** The key was published in
+      `.env.example` in earlier commits of this public repository, so anyone
+      could read every table and bypass row level security. Rotate it in
+      Supabase **Settings → API Keys**, then update `.env` locally and
+      `SUPABASE_SERVICE_ROLE_KEY` in the Hostinger panel. The publishable/anon
+      key is public by design and does not need rotating.
 - [ ] If a real key was ever pasted into a tracked file, a commit, or a chat,
       rotate it in Supabase **Settings → API Keys** and update Hostinger.
 - [ ] `SUPABASE_SERVICE_ROLE_KEY` is never prefixed with `VITE_` and never appears
@@ -256,6 +282,9 @@ If it was previously deployed as a static site: unregister the service worker (D
 - [ ] `0001_waraq_pro_hardening.sql` has been applied.
 - [ ] Demo passwords from the README are not reused on the production project.
 - [ ] Supabase Auth **Site URL** is `https://waraq.pro`, not localhost.
+- [ ] The Google OAuth client secret was shared in chat: rotate it in Google
+      Cloud Console if the client is still in use, and keep it only in the
+      Supabase provider settings.
 
 ---
 
