@@ -19,8 +19,6 @@ ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL \
     VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID \
     VITE_GOOGLE_AUTH_PROXY=$VITE_GOOGLE_AUTH_PROXY
 
-# Remove the preview-editor helper script that only the hosted preview uses.
-RUN node -e "const fs=require('fs');const f='index.html';fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace(/<script data-element-picker>[\\s\\S]*?<\\/script>/,''))"
 RUN npm run build
 
 # ---- runtime -----------------------------------------------------------------
