@@ -148,6 +148,36 @@ There are two classes, and they are not interchangeable.
 variables** → add each key/value, then redeploy. This works with GitHub deploys
 because the values live in Hostinger, not in the repository.
 
+### The "Connect your Supabase database" wizard
+
+Hostinger's Supabase wizard injects its own variables and rebuilds the app. It
+is a convenience, not a replacement for the list above:
+
+| Hostinger injects | Used by this app |
+|---|---|
+| `SUPABASE_URL` | accepted as the runtime URL |
+| `SUPABASE_ANON_KEY` / `SUPABASE_API_KEY` | the **public** key. The build maps it onto `VITE_SUPABASE_ANON_KEY`, so the browser can sign in |
+| `SUPABASE_SERVICE_ROLE_KEY` (only if you add it) | the secret key the API needs |
+
+The wizard's step 2 ("create `db.js` with `require('@supabase/supabase-js')`")
+is written for a Next.js CommonJS app. **Skip it**: this repository is an ES
+module (`"type": "module"`), it already connects in `api/db-client.js`, and
+`package.json` already pins `@supabase/supabase-js` at `^2.99.1`. Do not change
+the dependency line to `^2.0.0`.
+
+The one thing the wizard cannot supply is the **secret key**, and the API needs
+it for profiles, orders and admin work. Add it by hand:
+
+1. Supabase → **Settings → API Keys** → copy the **secret** / `service_role` key.
+2. hPanel → Environment variables → `SUPABASE_SERVICE_ROLE_KEY` = that key
+   (and `WARAQ_ADMIN_USER_IDS` = your admin user UUID).
+3. Redeploy.
+
+The server refuses to fall back to the public key: it logs
+`Warning: SUPABASE_SERVICE_ROLE_KEY holds the public anon key...` and every API
+call answers `The server is not configured yet`. That is deliberate — with the
+public key the catalogue would load while sign-in silently failed.
+
 > If a `VITE_*` value is missing or empty **during the build**, the site still
 > compiles but sign-in fails in the browser. Fix the value and redeploy — editing a
 > variable alone does not rebuild the bundle.

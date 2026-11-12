@@ -30,8 +30,43 @@ const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
 const MAX_BODY_BYTES = 1024 * 1024;
 
-// The API reads NEXT_PUBLIC_SUPABASE_URL; accept the other common names too.
-process.env.NEXT_PUBLIC_SUPABASE_URL ||= process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+/**
+ * Reads the role claim of a Supabase key. Legacy keys are JWTs; the newer
+ * `sb_secret_...` keys are opaque but always server-side keys.
+ */
+function keyRole(key) {
+  if (!key) return null;
+  if (key.startsWith('sb_secret_')) return 'service_role';
+  try {
+    const payload = JSON.parse(Buffer.from(key.split('.')[1], 'base64url').toString('utf8'));
+    return typeof payload.role === 'string' ? payload.role : null;
+  } catch {
+    return null;
+  }
+}
+
+function firstEnv(names) {
+  for (const name of names) {
+    const value = process.env[name];
+    if (value) return value;
+  }
+  return '';
+}
+
+// Hostinger's Supabase wizard injects SUPABASE_URL and SUPABASE_ANON_KEY /
+// SUPABASE_API_KEY (the public key). The API needs the service role key, so
+// every common spelling is accepted here.
+const supabaseUrl = firstEnv(['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL', 'VITE_SUPABASE_URL']);
+let serviceKey = firstEnv([
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'SUPABASE_SERVICE_KEY',
+  'SUPABASE_SECRET_KEY',
+]);
+const injectedPublicKey = firstEnv(['SUPABASE_API_KEY', 'SUPABASE_ANON_KEY', 'SUPABASE_PUBLIC_KEY']);
+if (!serviceKey && keyRole(injectedPublicKey) === 'service_role') serviceKey = injectedPublicKey;
+
+process.env.NEXT_PUBLIC_SUPABASE_URL = supabaseUrl;
+process.env.SUPABASE_SERVICE_ROLE_KEY = serviceKey;
 
 // Only these files in ./api are reachable. Everything else (helpers, db client) is not.
 const API_ROUTES = new Set(['me', 'services', 'contact', 'categories', 'products', 'orders', 'operations']);
@@ -124,7 +159,10 @@ async function handleApi(req, res, url) {
     handler = await loadHandler(name);
   } catch (err) {
     console.error('API failed to start. Check the Supabase environment variables.', err?.message);
-    return sendJson(res, 500, { error: 'The server is not configured yet.' });
+    return sendJson(res, 500, {
+      error:
+        'The server is not configured yet. Set SUPABASE_SERVICE_ROLE_KEY (the secret key) and NEXT_PUBLIC_SUPABASE_URL in the host environment variables.',
+    });
   }
   return handler(req, res);
 }
@@ -196,6 +234,12 @@ server.listen(PORT, HOST, () => {
   console.log(`Waraq Pro is listening on http://${HOST}:${PORT}`);
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     console.warn('Warning: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set. The API will not work.');
+  } else if (keyRole(process.env.SUPABASE_SERVICE_ROLE_KEY) === 'anon') {
+    console.warn(
+      'Warning: SUPABASE_SERVICE_ROLE_KEY holds the public anon key, not the secret key. ' +
+        'The API can read the catalogue but cannot manage profiles or orders. ' +
+        'Set the service_role / secret key from Supabase -> Settings -> API Keys.',
+    );
   }
 });
 

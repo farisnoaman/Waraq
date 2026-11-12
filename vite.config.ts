@@ -74,14 +74,33 @@ export default defineConfig(async ({ mode }) => {
   } catch {}
 
   const env = loadEnv(mode, process.cwd(), ['VITE_', 'NEXT_PUBLIC_']);
+  const browserEnv: Record<string, string> = { ...env };
+
+  // Hostinger's Supabase wizard injects SUPABASE_URL and SUPABASE_ANON_KEY /
+  // SUPABASE_API_KEY. The browser bundle needs the public key under the VITE_
+  // prefix, so the wizard's names are mapped onto it when the panel has not
+  // set the VITE_ variables itself.
+  if (!browserEnv.VITE_SUPABASE_URL) {
+    browserEnv.VITE_SUPABASE_URL =
+      process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  }
+  if (!browserEnv.VITE_SUPABASE_ANON_KEY) {
+    browserEnv.VITE_SUPABASE_ANON_KEY =
+      process.env.SUPABASE_ANON_KEY ||
+      process.env.SUPABASE_API_KEY ||
+      process.env.SUPABASE_PUBLIC_KEY ||
+      '';
+  }
+
   const processEnvDefines: Record<string, string> = {};
-  for (const [key, value] of Object.entries(env)) {
+  for (const [key, value] of Object.entries(browserEnv)) {
     processEnvDefines[`process.env.${key}`] = JSON.stringify(value);
   }
 
   return {
     plugins,
     envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
+    env: browserEnv,
     define: processEnvDefines,
     build: {
       sourcemap: true,
