@@ -35,9 +35,38 @@ function serviceWorkerPrecache(): Plugin {
   }
 }
 
+/**
+ * Puts the built stylesheet inside index.html. The sheet is small enough to
+ * travel with the document, and inlining it removes the render-blocking
+ * request that otherwise delays the first paint on a slow connection.
+ */
+function inlineCss(): Plugin {
+  return {
+    name: 'waraq-inline-css',
+    enforce: 'post',
+    apply: 'build',
+    generateBundle(_options, bundle) {
+      let css = ''
+      for (const [fileName, file] of Object.entries(bundle)) {
+        if (file.type === 'asset' && fileName.endsWith('.css')) {
+          css += typeof file.source === 'string' ? file.source : Buffer.from(file.source).toString('utf8')
+          delete bundle[fileName]
+        }
+      }
+      if (!css) return
+      for (const file of Object.values(bundle)) {
+        if (file.type === 'asset' && file.fileName.endsWith('.html')) {
+          const source = typeof file.source === 'string' ? file.source : Buffer.from(file.source).toString('utf8')
+          file.source = source.replace(/<link rel="stylesheet"[^>]*>/g, `<style>${css}</style>`)
+        }
+      }
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig(async ({ mode }) => {
-  const plugins = [react(), tailwindcss(), serviceWorkerPrecache()];
+  const plugins = [react(), tailwindcss(), inlineCss(), serviceWorkerPrecache()];
   try {
     // @ts-ignore
     const m = await import('./.vite-source-tags.js');
@@ -54,5 +83,26 @@ export default defineConfig(async ({ mode }) => {
     plugins,
     envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
     define: processEnvDefines,
+    build: {
+      sourcemap: true,
+      rollupOptions: {
+        output: {
+          manualChunks(id: string) {
+            if (!id.includes('node_modules')) return undefined;
+            if (id.includes('framer-motion') || id.includes('motion-dom') || id.includes('motion-utils')) {
+              return 'motion';
+            }
+            if (id.includes('@supabase')) return 'supabase';
+            if (id.includes('react-router')) return 'router';
+            if (id.includes('lucide-react')) return 'icons';
+            if (id.includes('react-dom') || id.includes('/react/') || id.includes('scheduler')) {
+              return 'react';
+            }
+            if (id.includes('zod')) return 'zod';
+            return undefined;
+          },
+        },
+      },
+    },
   };
 })

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, ChevronRight, Mail } from 'lucide-react';
@@ -52,6 +52,16 @@ export default function Home() {
   const categories = useApi<Category[]>('/api/categories');
   const products = useApi<Product[]>('/api/products');
   const services = useApi<ServiceItem[]>('/api/services');
+
+  useEffect(() => {
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'image';
+    link.href = '/images/hero-warehouse.jpg';
+    link.setAttribute('fetchpriority', 'high');
+    document.head.appendChild(link);
+    return () => link.remove();
+  }, []);
 
   const productCategories = useMemo(
     () =>
@@ -175,6 +185,8 @@ export default function Home() {
               <img
                 src="/images/hero-warehouse.jpg"
                 alt={t("Warehouse shelving stacked with packed cartons")}
+                fetchPriority="high"
+                decoding="async"
                 className="h-full w-full object-cover"
               />
               <div

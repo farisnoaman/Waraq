@@ -70,14 +70,16 @@ export default function ProductDetail() {
 
   if (products.loading) {
     return (
-      <section className="container-x py-10 lg:py-14">
+      <section className="container-x py-8 lg:py-12">
         <p className="sr-only" role="status">
           {t("Loading product")}
         </p>
-        <div className="skeleton h-4 w-64" />
-        <div className="mt-8 grid gap-10 lg:grid-cols-2">
+        <div className="flex h-[3.875rem] items-center lg:h-9">
+          <div className="skeleton h-4 w-64" />
+        </div>
+        <div className="mt-6 grid min-h-[90.25rem] gap-10 lg:min-h-[58rem] lg:grid-cols-2">
           <div className="skeleton aspect-[4/3] rounded-2xl" />
-          <div className="space-y-4">
+          <div className="min-h-[70rem] space-y-4 lg:min-h-[57.5rem]">
             <div className="skeleton h-4 w-32" />
             <div className="skeleton h-12 w-4/5" />
             <div className="skeleton h-5 w-full" />
@@ -152,7 +154,7 @@ export default function ProductDetail() {
           )}
         </div>
 
-        <div className="mt-6 grid gap-10 lg:grid-cols-2 lg:gap-16">
+        <div className="mt-6 grid min-h-[90.25rem] gap-10 lg:min-h-[58rem] lg:grid-cols-2 lg:gap-16">
           <div className="lg:sticky lg:top-24 lg:self-start">
             <div className="overflow-hidden rounded-2xl border border-line bg-paper-deep">
               <img
