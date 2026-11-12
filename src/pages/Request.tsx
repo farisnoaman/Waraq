@@ -39,7 +39,7 @@ interface PlacedOrder {
 }
 
 export default function RequestPage() {
-  usePageTitle(t('Request list'));
+  usePageTitle(t('Request list'), { noIndex: true });
   const { profile, loading: authLoading } = useAuth();
   const products = useApi<Product[]>('/api/products');
   const { lines, setQty, remove, clear } = useRequestList();

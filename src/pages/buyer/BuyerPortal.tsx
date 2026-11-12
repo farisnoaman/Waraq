@@ -459,7 +459,7 @@ function OrderCard({ order, queuedConfirmation, online, onConfirm, onBill, onRec
 }
 
 export default function BuyerPortal() {
-  usePageTitle(t('Buyer portal'));
+  usePageTitle(t('Buyer portal'), { noIndex: true });
   const { profile, offlineSession } = useAuth();
   const location = useLocation();
   const userId = profile?.id ?? '';

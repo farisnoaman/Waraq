@@ -48,7 +48,7 @@ export default function AdminPortal() {
   const { profile, signOut } = useAuth();
   const online = useOnline();
   const isAdmin = profile?.role === 'admin';
-  usePageTitle(isAdmin ? t('Admin portal') : t('Staff portal'));
+  usePageTitle(isAdmin ? t('Admin portal') : t('Staff portal'), { noIndex: true });
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [sellerVat, setSellerVat] = useState('');

@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { MotionConfig } from 'framer-motion';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { FullPageLoader } from './components/ui';
@@ -19,13 +20,13 @@ const BuyerPortal = lazy(() => import('./pages/buyer/BuyerPortal'));
 const AdminPortal = lazy(() => import('./pages/admin/AdminPortal'));
 
 export default function App() {
-  // Subscribing here re-renders the whole tree when the language is switched.
   useLang();
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <RequestListProvider>
-          <Routes>
+    <MotionConfig reducedMotion="user">
+      <BrowserRouter>
+        <AuthProvider>
+          <RequestListProvider>
+            <Routes>
             <Route element={<Layout />}>
               <Route index element={<Home />} />
               <Route path="products" element={<Products />} />
@@ -65,5 +66,6 @@ export default function App() {
         </RequestListProvider>
       </AuthProvider>
     </BrowserRouter>
+    </MotionConfig>
   );
 }

@@ -33,7 +33,7 @@ function GoogleMark() {
 }
 
 export default function Login() {
-  usePageTitle(t('Sign in'));
+  usePageTitle(t('Sign in'), { noIndex: true });
   const { profile, loading, signIn, signUp, googleSignIn, signOut } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();

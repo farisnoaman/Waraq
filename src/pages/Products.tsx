@@ -52,7 +52,11 @@ function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }
 }
 
 export default function Products() {
-  usePageTitle(t('Products'));
+  usePageTitle(t('Products'), {
+    description: t(
+      'Browse paper, packaging and office supplies in Jeddah. Add items to your request list and get a clear quotation from Waraq Pro.',
+    ),
+  });
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
   const [params, setParams] = useSearchParams();

@@ -44,7 +44,11 @@ const PROMISES = [
 ];
 
 export default function Home() {
-  usePageTitle();
+  usePageTitle(undefined, {
+    description: t(
+      'Waraq Pro supplies paper, packaging and office products in Jeddah. Established 2015 — from your request to delivery at your door.',
+    ),
+  });
   const categories = useApi<Category[]>('/api/categories');
   const products = useApi<Product[]>('/api/products');
   const services = useApi<ServiceItem[]>('/api/services');

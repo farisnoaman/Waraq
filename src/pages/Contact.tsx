@@ -31,7 +31,11 @@ const EMPTY = {
 };
 
 export default function Contact() {
-  usePageTitle(t('Contact'));
+  usePageTitle(t('Contact'), {
+    description: t(
+      'Contact Waraq Pro in Jeddah for paper, packaging and office supply enquiries, quotations and orders.',
+    ),
+  });
   const [values, setValues] = useState(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [sending, setSending] = useState(false);

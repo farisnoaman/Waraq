@@ -4,7 +4,7 @@ import { usePageTitle } from '../components/ui';
 import { t } from '../lib/i18n';
 
 export default function NotFound() {
-  usePageTitle(t('Page not found'));
+  usePageTitle(t('Page not found'), { noIndex: true });
   return (
     <section className="container-x py-24 text-center sm:py-32">
       <p className="eyebrow text-primary-strong">{t("Page not found")}</p>

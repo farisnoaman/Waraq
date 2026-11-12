@@ -39,13 +39,62 @@ export function serviceIcon(name: string): LucideIcon {
   return SERVICE_ICONS[name] ?? Check;
 }
 
-export function usePageTitle(title?: string) {
+function upsertMeta(attr: 'name' | 'property', key: string, content: string) {
+  let el = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`);
+  if (!el) {
+    el = document.createElement('meta');
+    el.setAttribute(attr, key);
+    document.head.appendChild(el);
+  }
+  el.setAttribute('content', content);
+}
+
+function upsertLink(rel: string, href: string) {
+  let el = document.head.querySelector<HTMLLinkElement>(`link[rel="${rel}"]`);
+  if (!el) {
+    el = document.createElement('link');
+    el.setAttribute('rel', rel);
+    document.head.appendChild(el);
+  }
+  el.setAttribute('href', href);
+}
+
+export function usePageTitle(
+  title?: string,
+  options?: { description?: string; noIndex?: boolean; image?: string },
+) {
   const lang = getLang();
   useEffect(() => {
-    document.title = title
+    const fullTitle = title
       ? `${title} | ${t('Waraq Pro')} (waraq.pro)`
       : t('Waraq Pro | Paper, packaging and office supply in Jeddah (waraq.pro)');
-  }, [title, lang]);
+    const description =
+      options?.description ??
+      t('Paper, packaging and office supply in Jeddah. From your request to delivery at your door.');
+    const url = `https://waraq.pro${window.location.pathname}`;
+    const image = options?.image ?? 'https://waraq.pro/images/hero-warehouse.jpg';
+    const robots = options?.noIndex
+      ? 'noindex, nofollow'
+      : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
+
+    document.title = fullTitle;
+    upsertMeta('name', 'description', description);
+    upsertMeta('name', 'robots', robots);
+    upsertLink('canonical', url);
+
+    upsertMeta('property', 'og:type', 'website');
+    upsertMeta('property', 'og:site_name', 'Waraq Pro | ورق برو');
+    upsertMeta('property', 'og:url', url);
+    upsertMeta('property', 'og:title', fullTitle);
+    upsertMeta('property', 'og:description', description);
+    upsertMeta('property', 'og:image', image);
+    upsertMeta('property', 'og:locale', lang === 'ar' ? 'ar_SA' : 'en_US');
+
+    upsertMeta('name', 'twitter:card', 'summary_large_image');
+    upsertMeta('name', 'twitter:title', fullTitle);
+    upsertMeta('name', 'twitter:description', description);
+    upsertMeta('name', 'twitter:image', image);
+  }, [title, lang, options?.description, options?.noIndex, options?.image]);
 }
 
 export function Reveal({

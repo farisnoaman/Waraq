@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /buyer
+Disallow: /login
+Disallow: /request
+Disallow: /api/
+
+Sitemap: https://waraq.pro/sitemap.xml

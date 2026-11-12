@@ -53,7 +53,12 @@ export default function ProductDetail() {
     setDraftQty(moq);
   }, [slug, moq]);
 
-  usePageTitle(t(product?.name ?? 'Product'));
+  usePageTitle(t(product?.name ?? 'Product'), {
+    description: product
+      ? t(product.description || product.summary)
+      : t('Paper, packaging and office supply in Jeddah.'),
+    image: product?.image ? `https://waraq.pro${product.image}` : undefined,
+  });
 
   if (products.error) {
     return (
