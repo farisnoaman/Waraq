@@ -183,7 +183,7 @@ export default function Products() {
       >
         <span>{t(label)}</span>
         <span
-          className={`text-sm tabular-nums ${active ? 'text-white/85' : 'text-muted'}`}
+          className={`text-sm tabular-nums ${active ? 'text-white' : 'text-muted'}`}
           aria-label={t("{0} products", [count])}
         >
           {count}
@@ -358,6 +358,7 @@ export default function Products() {
           </aside>
 
           <div className="min-w-0">
+            <h2 className="sr-only">{t("Catalogue results")}</h2>
             {error ? (
               <ErrorPanel message={error} onRetry={retry} />
             ) : loading ? (

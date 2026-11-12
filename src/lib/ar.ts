@@ -1060,6 +1060,7 @@ export const ar: Record<string, string> = {
   "All products": "كل المنتجات",
   "All projects": "كل المشاريع",
   "All": "الكل",
+  "Catalogue results": "نتائج الكتالوج",
   "Something went wrong. Please try again.": "حدث خطأ. حاول مرة أخرى.",
   "We could not send your message. Please try again.": "تعذّر إرسال رسالتك. حاول مرة أخرى.",
   "We could not place your order. Please try again.": "تعذّر إرسال طلبك. حاول مرة أخرى.",

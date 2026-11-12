@@ -22,7 +22,6 @@ export default function Logo({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
         <span
           lang="ar"
           dir="rtl"
-          aria-hidden="true"
           className={`hidden whitespace-nowrap font-arabic text-lg font-medium min-[430px]:inline ${dark ? 'text-brass-soft' : 'text-primary'}`}
         >
           ورق برو

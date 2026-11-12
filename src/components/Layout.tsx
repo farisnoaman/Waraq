@@ -64,7 +64,10 @@ function InstallButton() {
 function TopBar() {
   const { profile, signOut } = useAuth();
   return (
-    <div className="on-dark bg-forest text-paper/85 print:hidden">
+    <aside
+      aria-label={t("Contact and account details")}
+      className="on-dark bg-forest text-paper/85 print:hidden"
+    >
       <div className="container-x flex min-h-9 flex-wrap items-center justify-between gap-x-4 gap-y-1 py-1.5 text-[13px]">
         <p className="flex items-center gap-1.5">
           <MapPin className="h-3.5 w-3.5 text-brass-soft" aria-hidden="true" />
@@ -120,7 +123,7 @@ function TopBar() {
           )}
         </div>
       </div>
-    </div>
+    </aside>
   );
 }
 
@@ -158,7 +161,7 @@ function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/92 backdrop-blur-md print:hidden">
       <div className="container-x flex h-[68px] items-center justify-between gap-4">
-        <Link to="/" aria-label={t("Waraq Pro, home")} className="rounded-lg">
+        <Link to="/" className="rounded-lg">
           <Logo />
         </Link>
 
@@ -195,7 +198,9 @@ function Header() {
           <button
             type="button"
             onClick={toggleLang}
-            aria-label={lang === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
+            aria-label={
+              lang === 'ar' ? 'EN — Switch to English' : 'عربي — التبديل إلى العربية'
+            }
             title={lang === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
             className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-line px-3 text-sm font-semibold text-ink transition-colors hover:bg-paper-deep"
           >
@@ -498,7 +503,9 @@ export default function Layout() {
       </main>
       <Footer />
       <Toast />
-      <WhatsAppFab />
+      <aside aria-label={t("Quick contact")}>
+        <WhatsAppFab />
+      </aside>
       <IdleWarning />
     </div>
   );
