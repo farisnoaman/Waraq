@@ -381,6 +381,7 @@ export const ar: Record<string, string> = {
   "Payments": "المدفوعات",
   "Commissions": "العمولات",
   "Users & staff": "المستخدمون والموظفون",
+  "Users": "المستخدمون",
   "Settings": "الإعدادات",
   "Inbox": "الوارد",
   "Profile": "الملف الشخصي",

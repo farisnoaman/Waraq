@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Navigate, NavLink, Route, Routes } from 'react-router-dom';
+import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import {
   BadgePercent,
   ClipboardList,
@@ -41,6 +41,8 @@ const POLL_MS = 30000;
 interface Tab {
   to: string;
   label: string;
+  /** Short name shown on phone tiles where space is tight. */
+  short?: string;
   icon: LucideIcon;
   count?: number;
   adminOnly?: boolean;
@@ -48,6 +50,7 @@ interface Tab {
 
 export default function AdminPortal() {
   const { profile, signOut } = useAuth();
+  const pathname = useLocation().pathname;
   const online = useOnline();
   const isAdmin = profile?.role === 'admin';
   usePageTitle(isAdmin ? t('Admin portal') : t('Staff portal'), { noIndex: true });
@@ -106,7 +109,7 @@ export default function AdminPortal() {
     { to: 'payments', label: 'Payments', icon: Wallet, count: withPayment },
     { to: 'promotions', label: 'Promotions', icon: Tags, adminOnly: true },
     { to: 'commissions', label: 'Commissions', icon: BadgePercent },
-    { to: 'users', label: 'Users & staff', icon: Users, adminOnly: true },
+    { to: 'users', label: 'Users & staff', short: 'Users', icon: Users, adminOnly: true },
     { to: 'settings', label: 'Settings', icon: SettingsIcon, adminOnly: true },
     { to: 'inbox', label: 'Inbox', icon: Inbox, adminOnly: true },
     { to: 'profile', label: 'Profile', icon: UserRound },
@@ -160,9 +163,45 @@ export default function AdminPortal() {
         </div>
       </PageHeader>
 
-      <div className="sticky top-16 z-30 border-b border-line bg-paper/95 backdrop-blur-md sm:top-[68px] print:hidden">
-        <nav aria-label={t("Operations")} className="container-x">
-          <ul className="flex flex-wrap gap-1 py-2.5">
+      <div className="relative z-30 border-b border-line bg-paper/95 backdrop-blur-md lg:sticky lg:top-[68px] print:hidden">
+        <nav aria-label={t("Operations")} className="container-x py-2.5">
+          {/* Phones and tablets: equal-width tiles, 2 columns on phones and
+              3 on wider screens. Not sticky here so the grid never eats the
+              small screen. */}
+          <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:hidden">
+            {tabs.map((tab) => {
+              const active = pathname === `/admin/${tab.to}`;
+              return (
+                <li key={tab.to}>
+                  <NavLink
+                    to={`/admin/${tab.to}`}
+                    className={`flex min-h-11 items-center justify-center gap-2 rounded-xl border px-2 text-[13px] font-semibold transition-colors sm:text-sm ${
+                      active
+                        ? 'border-forest bg-forest text-paper'
+                        : 'border-line bg-card text-ink/80 hover:bg-paper-deep'
+                    }`}
+                  >
+                    {/* Phones: short name only, no icon — tiles stay tidy. */}
+                    <span className="truncate sm:hidden">{t(tab.short ?? tab.label)}</span>
+                    <span className="hidden truncate sm:inline">{t(tab.label)}</span>
+                    <tab.icon className="hidden h-4 w-4 shrink-0 sm:block" aria-hidden="true" />
+                    {tab.count !== undefined && (
+                      <span
+                        className={`rounded-full px-1.5 text-xs tabular-nums ${
+                          active ? 'bg-white/20' : 'bg-paper-deep'
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    )}
+                  </NavLink>
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* Desktop: the classic single-row pill strip. */}
+          <ul className="hidden flex-wrap gap-1 lg:flex">
             {tabs.map((tab) => (
               <li key={tab.to}>
                 <NavLink
