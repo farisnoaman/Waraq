@@ -157,9 +157,9 @@ export default function AdminPortal() {
         </div>
       </PageHeader>
 
-      <div className="sticky top-[68px] z-30 border-b border-line bg-paper/95 backdrop-blur-md print:hidden">
-        <nav aria-label={t("Operations")} className="container-x overflow-x-auto">
-          <ul className="flex min-w-max gap-1 py-2.5">
+      <div className="sticky top-16 z-30 border-b border-line bg-paper/95 backdrop-blur-md sm:top-[68px] print:hidden">
+        <nav aria-label={t("Operations")} className="container-x">
+          <ul className="flex flex-wrap gap-1 py-2.5">
             {tabs.map((tab) => (
               <li key={tab.to}>
                 <NavLink

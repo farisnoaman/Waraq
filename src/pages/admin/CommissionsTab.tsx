@@ -1,6 +1,7 @@
-import { Fragment, useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BadgePercent, Check, ChevronDown, HandCoins, Settings as SettingsIcon, X } from 'lucide-react';
+import { BadgePercent, Check, HandCoins, Settings as SettingsIcon, X } from 'lucide-react';
+import ResponsiveTable from '../../components/ResponsiveTable';
 import { Alert, Badge, ErrorPanel, Spinner } from '../../components/ui';
 import { api, errorMessage } from '../../lib/api';
 import {
@@ -101,185 +102,163 @@ export default function CommissionsTab({ isAdmin, orders }: OpsProps) {
 
           {action.error && <Alert className="mb-5">{action.error}</Alert>}
 
-          <div className="overflow-x-auto rounded-2xl border border-line bg-card">
-            <table className="data-table min-w-[900px]">
-              <thead>
-                <tr>
-                  <th scope="col" className="w-10">
-                    <span className="sr-only">{t("Expand")}</span>
-                  </th>
-                  <th scope="col">{t("Order")}</th>
-                  <th scope="col">{t("Staff member")}</th>
-                  <th scope="col">{t("MOQ tier")}</th>
-                  <th scope="col" className="num">
-                    {t("Order value (excl. VAT)")}
-                  </th>
-                  <th scope="col" className="num">
-                    {t("Rate")}
-                  </th>
-                  <th scope="col" className="num">
-                    {t("Commission")}
-                  </th>
-                  <th scope="col">{t("Payment status")}</th>
-                  <th scope="col">{t("Action")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => {
-                  const expanded = open.has(row.id);
-                  return (
-                    <Fragment key={row.id}>
-                      <tr>
-                        <td>
-                          <button
-                            type="button"
-                            onClick={() => toggle(row.id)}
-                            aria-expanded={expanded}
-                            aria-label={t("{0} calculation for {1}", [expanded ? t("Hide") : t("Show"), row.order_reference])}
-                            className="grid h-9 w-9 place-items-center rounded-full hover:bg-paper-deep"
-                          >
-                            <ChevronDown
-                              className={`h-4 w-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
-                              aria-hidden="true"
-                            />
-                          </button>
-                        </td>
-                        <td>
-                          <p className="font-display text-lg tracking-wide">{row.order_reference}</p>
-                          <p className="text-xs text-muted">{formatDateTime(row.created_at)}</p>
-                        </td>
-                        <td>
-                          <p className="font-semibold">{row.staff_name}</p>
-                          <p className="text-xs text-muted">{row.staff_email}</p>
-                        </td>
-                        <td>
-                          <p>{t(row.tier_label)}</p>
-                          <p className="text-xs text-muted">{t("Highest MOQ")}{' '}{row.moq_basis}</p>
-                        </td>
-                        <td className="num">{sar(row.order_value)}</td>
-                        <td className="num">{percent(row.rate)}</td>
-                        <td className="num font-bold text-primary-strong">{sar(row.amount)}</td>
-                        <td>
-                          <Badge tone={COMMISSION_STATUS_TONE[row.status]}>
-                            {t(COMMISSION_STATUS_LABEL[row.status])}
-                          </Badge>
-                          {row.status === 'paid' && (
-                            <p className="mt-1 text-xs text-muted">{formatDateTime(row.confirmed_at)}</p>
-                          )}
-                        </td>
-                        <td>
-                          {isAdmin && row.status === 'unpaid' && (
-                            <button
-                              type="button"
-                              className="btn btn-primary btn-sm"
-                              disabled={action.busy !== null}
-                              onClick={() => void act(row, 'pay')}
-                            >
-                              {action.busy === `pay-${row.id}` ? (
-                                <Spinner />
-                              ) : (
-                                <HandCoins className="h-4 w-4" aria-hidden="true" />
-                              )}
-                              {t("Pay commission")}
-                            </button>
-                          )}
-                          {isAdmin && row.status === 'awaiting_confirmation' && (
-                            <p className="text-sm text-muted">
-                              {t("Marked paid")}{' '}{formatDateTime(row.paid_marked_at)}.
-                              <br />
-                              {t("Waiting for")}{' '}{row.staff_name.split(' ')[0]}.
-                            </p>
-                          )}
-                          {!isAdmin && row.status === 'awaiting_confirmation' && (
-                            <div className="flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                className="btn btn-primary btn-sm"
-                                disabled={action.busy !== null}
-                                onClick={() => void act(row, 'confirm')}
-                              >
-                                {action.busy === `confirm-${row.id}` ? (
-                                  <Spinner />
-                                ) : (
-                                  <Check className="h-4 w-4" aria-hidden="true" />
-                                )}
-                                {t("Confirm received")}
-                              </button>
-                              <button
-                                type="button"
-                                className="btn btn-danger btn-sm"
-                                disabled={action.busy !== null}
-                                onClick={() => void act(row, 'reject')}
-                              >
-                                {action.busy === `reject-${row.id}` ? (
-                                  <Spinner />
-                                ) : (
-                                  <X className="h-4 w-4" aria-hidden="true" />
-                                )}
-                                {t("Not received")}
-                              </button>
-                            </div>
-                          )}
-                          {!isAdmin && row.status === 'unpaid' && (
-                            <p className="text-sm text-muted">{t("Awaiting payment by admin.")}</p>
-                          )}
-                          {row.status === 'paid' && (
-                            <p className="inline-flex items-center gap-1 text-sm font-semibold text-primary-strong">
-                              <Check className="h-4 w-4" aria-hidden="true" />
-                              {t("Settled")}
-                            </p>
-                          )}
-                        </td>
-                      </tr>
-                      {expanded && (
-                        <tr>
-                          <td colSpan={9} className="bg-paper/60 !p-4 sm:!p-5">
-                            <div className="overflow-x-auto rounded-xl border border-line bg-white">
-                              <table className="data-table min-w-[620px]">
-                                <thead>
-                                  <tr>
-                                    <th scope="col">{t("Item")}</th>
-                                    <th scope="col" className="num">
-                                      {t("Product MOQ")}
-                                    </th>
-                                    <th scope="col">{t("Tier applied")}</th>
-                                    <th scope="col" className="num">
-                                      {t("Line value (excl. VAT)")}
-                                    </th>
-                                    <th scope="col" className="num">
-                                      {t("Rate")}
-                                    </th>
-                                    <th scope="col" className="num">
-                                      {t("Commission")}
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {row.breakdown.map((line, i) => (
-                                    <tr key={`${line.sku}-${i}`}>
-                                      <td>
-                                        <span className="font-semibold">{t(line.product_name)}</span>{' '}
-                                        <span className="text-xs text-muted">{line.sku}</span>
-                                      </td>
-                                      <td className="num">{line.moq}</td>
-                                      <td>{t(line.tier_label)}</td>
-                                      <td className="num">{sar(line.base)}</td>
-                                      <td className="num">{percent(line.rate)}</td>
-                                      <td className="num font-semibold">{sar(line.amount)}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </td>
-                        </tr>
+          <ResponsiveTable
+            rows={rows}
+            getRowKey={(row) => row.id}
+            minWidth={900}
+            isExpanded={(row) => open.has(row.id)}
+            onToggle={(row) => toggle(row.id)}
+            expandAria={(row, expanded) =>
+              t("{0} calculation for {1}", [expanded ? t("Hide") : t("Show"), row.order_reference])
+            }
+            expandedContent={(row) => (
+              <ResponsiveTable
+                nested
+                rows={row.breakdown}
+                getRowKey={(line) => line.sku}
+                minWidth={620}
+                columns={[
+                  {
+                    label: t("Item"),
+                    primary: true,
+                    render: (line) => (
+                      <>
+                        <span className="font-semibold">{t(line.product_name)}</span>{' '}
+                        <span className="text-xs text-muted">{line.sku}</span>
+                      </>
+                    ),
+                  },
+                  { label: t("Product MOQ"), num: true, render: (line) => line.moq },
+                  { label: t("Tier applied"), render: (line) => t(line.tier_label) },
+                  { label: t("Line value (excl. VAT)"), num: true, render: (line) => sar(line.base) },
+                  { label: t("Rate"), num: true, render: (line) => percent(line.rate) },
+                  {
+                    label: t("Commission"),
+                    num: true,
+                    render: (line) => <span className="font-semibold">{sar(line.amount)}</span>,
+                  },
+                ]}
+              />
+            )}
+            columns={[
+              {
+                label: t("Order"),
+                primary: true,
+                render: (row) => (
+                  <>
+                    <p className="font-display text-lg tracking-wide">{row.order_reference}</p>
+                    <p className="text-xs text-muted">{formatDateTime(row.created_at)}</p>
+                  </>
+                ),
+              },
+              {
+                label: t("Staff member"),
+                primary: true,
+                render: (row) => (
+                  <>
+                    <p className="font-semibold">{row.staff_name}</p>
+                    <p className="text-xs text-muted">{row.staff_email}</p>
+                  </>
+                ),
+              },
+              {
+                label: t("MOQ tier"),
+                render: (row) => (
+                  <>
+                    <p>{t(row.tier_label)}</p>
+                    <p className="text-xs text-muted">{t("Highest MOQ")}{' '}{row.moq_basis}</p>
+                  </>
+                ),
+              },
+              { label: t("Order value (excl. VAT)"), num: true, render: (row) => sar(row.order_value) },
+              { label: t("Rate"), num: true, render: (row) => percent(row.rate) },
+              {
+                label: t("Commission"),
+                num: true,
+                render: (row) => (
+                  <span className="font-bold text-primary-strong">{sar(row.amount)}</span>
+                ),
+              },
+              {
+                label: t("Payment status"),
+                render: (row) => (
+                  <>
+                    <Badge tone={COMMISSION_STATUS_TONE[row.status]}>
+                      {t(COMMISSION_STATUS_LABEL[row.status])}
+                    </Badge>
+                    {row.status === 'paid' && (
+                      <p className="mt-1 text-xs text-muted">{formatDateTime(row.confirmed_at)}</p>
+                    )}
+                  </>
+                ),
+              },
+            ]}
+            actions={(row) => (
+              <>
+                {isAdmin && row.status === 'unpaid' && (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    disabled={action.busy !== null}
+                    onClick={() => void act(row, 'pay')}
+                  >
+                    {action.busy === `pay-${row.id}` ? (
+                      <Spinner />
+                    ) : (
+                      <HandCoins className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    {t("Pay commission")}
+                  </button>
+                )}
+                {isAdmin && row.status === 'awaiting_confirmation' && (
+                  <p className="text-sm text-muted">
+                    {t("Marked paid")}{' '}{formatDateTime(row.paid_marked_at)}.
+                    <br />
+                    {t("Waiting for")}{' '}{row.staff_name.split(' ')[0]}.
+                  </p>
+                )}
+                {!isAdmin && row.status === 'awaiting_confirmation' && (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      disabled={action.busy !== null}
+                      onClick={() => void act(row, 'confirm')}
+                    >
+                      {action.busy === `confirm-${row.id}` ? (
+                        <Spinner />
+                      ) : (
+                        <Check className="h-4 w-4" aria-hidden="true" />
                       )}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      {t("Confirm received")}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-sm"
+                      disabled={action.busy !== null}
+                      onClick={() => void act(row, 'reject')}
+                    >
+                      {action.busy === `reject-${row.id}` ? (
+                        <Spinner />
+                      ) : (
+                        <X className="h-4 w-4" aria-hidden="true" />
+                      )}
+                      {t("Not received")}
+                    </button>
+                  </div>
+                )}
+                {!isAdmin && row.status === 'unpaid' && (
+                  <p className="text-sm text-muted">{t("Awaiting payment by admin.")}</p>
+                )}
+                {row.status === 'paid' && (
+                  <p className="inline-flex items-center gap-1 text-sm font-semibold text-primary-strong">
+                    <Check className="h-4 w-4" aria-hidden="true" />
+                    {t("Settled")}
+                  </p>
+                )}
+              </>
+            )}
+          />
         </>
       )}
     </div>

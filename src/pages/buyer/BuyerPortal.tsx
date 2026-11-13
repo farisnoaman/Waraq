@@ -21,6 +21,7 @@ import {
 import DocumentModal from '../../components/DocumentModal';
 import { OrderItemsTable, OrderSummary } from '../../components/OrderBreakdown';
 import ProfilePanel from '../../components/ProfilePanel';
+import ResponsiveTable from '../../components/ResponsiveTable';
 import WhatsAppIcon from '../../components/WhatsAppIcon';
 import { Alert, Badge, ErrorPanel, PageHeader, Spinner, usePageTitle } from '../../components/ui';
 import { useAuth } from '../../contexts/AuthContext';
@@ -339,7 +340,7 @@ function OrderCard({ order, queuedConfirmation, online, onConfirm, onBill, onRec
       {open && (
         <div className="fade-up mt-6 space-y-5 border-t border-line pt-6">
           <OrderItemsTable order={order} />
-          <div className="grid gap-5 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <div className="space-y-4 text-sm">
               <div className="rounded-xl border border-line p-4">
                 <h4 className="eyebrow text-muted">{t("Delivery")}</h4>
@@ -632,43 +633,53 @@ export default function BuyerPortal() {
                     {t('No payments have been recorded for this order yet.')}
                   </p>
                 ) : (
-                  <div className="mt-4 overflow-x-auto rounded-xl border border-line bg-white">
-                    <table className="data-table min-w-[680px]">
-                      <thead>
-                        <tr>
-                          <th scope="col">{t('Receipt no.')}</th>
-                          <th scope="col">{t('Received on')}</th>
-                          <th scope="col">{t('Received by')}</th>
-                          <th scope="col">{t('Payment method')}</th>
-                          <th scope="col" className="num">{t('Amount')}</th>
-                          <th scope="col" className="num">{t('Balance after')}</th>
-                          <th scope="col"><span className="sr-only">{t('Receipt')}</span></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {payment.installments.map((installment) => (
-                          <tr key={installment.id}>
-                            <td className="font-semibold">{installment.receipt_number}</td>
-                            <td>{formatDateTime(installment.created_at)}</td>
-                            <td>{installment.receiver_name}</td>
-                            <td>{t(PAYMENT_METHOD_LABEL[installment.method])}</td>
-                            <td className="num font-semibold">{sar(installment.amount)}</td>
-                            <td className="num">{sar(installment.balance_after)}</td>
-                            <td className="num">
-                              <button
-                                type="button"
-                                className="btn btn-outline btn-sm"
-                                onClick={() => setReceipt({ order, installment })}
-                              >
-                                <Printer className="h-4 w-4" aria-hidden="true" />
-                                {t('Print receipt')}
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <ResponsiveTable
+                    nested
+                    className="mt-4"
+                    rows={payment.installments}
+                    getRowKey={(installment) => installment.id}
+                    minWidth={680}
+                    columns={[
+                      {
+                        label: t('Receipt no.'),
+                        primary: true,
+                        render: (installment) => (
+                          <span className="font-semibold">{installment.receipt_number}</span>
+                        ),
+                      },
+                      {
+                        label: t('Received on'),
+                        render: (installment) => formatDateTime(installment.created_at),
+                      },
+                      { label: t('Received by'), render: (installment) => installment.receiver_name },
+                      {
+                        label: t('Payment method'),
+                        render: (installment) => t(PAYMENT_METHOD_LABEL[installment.method]),
+                      },
+                      {
+                        label: t('Amount'),
+                        num: true,
+                        render: (installment) => (
+                          <span className="font-semibold">{sar(installment.amount)}</span>
+                        ),
+                      },
+                      {
+                        label: t('Balance after'),
+                        num: true,
+                        render: (installment) => sar(installment.balance_after),
+                      },
+                    ]}
+                    actions={(installment) => (
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        onClick={() => setReceipt({ order, installment })}
+                      >
+                        <Printer className="h-4 w-4" aria-hidden="true" />
+                        {t('Print receipt')}
+                      </button>
+                    )}
+                  />
                 )}
               </li>
             );

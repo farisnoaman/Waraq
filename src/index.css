@@ -51,6 +51,14 @@
     text-rendering: optimizeLegibility;
   }
 
+  /* The layout must always fit the screen: clip any accidental sideways
+     overflow instead of giving the page a horizontal scrollbar. Unlike
+     `overflow: hidden`, clip does not create a scroll container, so sticky
+     headers and tab bars keep working. */
+  html {
+    overflow-x: clip;
+  }
+
   h1,
   h2,
   h3 {
@@ -114,6 +122,129 @@
     text-transform: uppercase;
   }
 
+  /* ---------------------------------------------------------------------
+   * Logo lockup — icon and wordmark share one unit (--u) so the mark
+   * scales as a piece. Sizes: 30px phones, 32px ≥360px, 40px ≥sm,
+   * 44px ≥lg; .logo-lg for the footer. Falls back to Readex Pro until the
+   * Cairo and Plus Jakarta Sans woff2 files are added to /public/fonts.
+   * ------------------------------------------------------------------- */
+  .logo-mark {
+    --u: 30px;
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--u) * 0.29);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  @media (min-width: 360px) {
+    .logo-mark {
+      --u: 32px;
+    }
+  }
+
+  @media (min-width: 640px) {
+    .logo-mark {
+      --u: 40px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .logo-mark {
+      --u: 44px;
+    }
+  }
+
+  .logo-mark.logo-lg {
+    --u: 56px;
+  }
+
+  .logo-light {
+    --logo-ar: #123d35;
+    --logo-en: #2c5e53;
+    --logo-leaf: #86b817;
+    --logo-rule: rgb(18 61 53 / 0.16);
+  }
+
+  .logo-dark {
+    --logo-ar: #fff;
+    --logo-en: #d8f26a;
+    --logo-leaf: #d8f26a;
+    --logo-rule: rgb(216 242 106 / 0.28);
+  }
+
+  .logo-icon {
+    display: block;
+    flex: 0 0 auto;
+    width: var(--u);
+    height: var(--u);
+  }
+
+  .logo-wm {
+    display: flex;
+    height: var(--u);
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    line-height: 1;
+    overflow: visible;
+  }
+
+  .logo-ar {
+    direction: rtl;
+    flex: 0 0 auto;
+    color: var(--logo-ar);
+    font-family: 'Cairo', 'Readex Pro', 'Noto Sans Arabic', Tahoma, sans-serif;
+    font-size: calc(var(--u) * 0.5);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+
+  .logo-divider {
+    display: flex;
+    width: 100%;
+    height: calc(var(--u) * 0.18);
+    flex: 0 0 auto;
+    align-items: center;
+    gap: calc(var(--u) * 0.06);
+  }
+
+  .logo-bar {
+    display: block;
+    height: 1.5px;
+    border-radius: 999px;
+    background: var(--logo-rule);
+  }
+
+  .logo-bar-a {
+    flex: 3.7;
+  }
+
+  .logo-bar-b {
+    flex: 10.3;
+  }
+
+  .logo-leaf {
+    display: block;
+    flex: 0 0 auto;
+    width: calc(var(--u) * 0.25);
+    height: calc(var(--u) * 0.1875);
+  }
+
+  .logo-en {
+    flex: 0 0 auto;
+    margin-top: calc(var(--u) * -0.06);
+    color: var(--logo-en);
+    font-family: 'Plus Jakarta Sans', 'Readex Pro', system-ui, sans-serif;
+    font-size: calc(var(--u) * 0.32);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.025em;
+    white-space: nowrap;
+  }
+
   .btn {
     display: inline-flex;
     align-items: center;
@@ -143,6 +274,14 @@
   .btn:disabled {
     opacity: 0.55;
     cursor: not-allowed;
+  }
+
+  /* On very narrow phones a pill may be wider than the screen; let the label
+     wrap instead of pushing the page sideways. */
+  @media (max-width: 399.98px) {
+    .btn {
+      white-space: normal;
+    }
   }
 
   .btn-sm {
@@ -300,6 +439,22 @@
     font-size: 0.9375rem;
   }
 
+  /* On phones every input stays at 16px so iOS Safari never zooms on focus. */
+  @media (max-width: 639.98px) {
+    .field-input {
+      font-size: 1rem;
+    }
+  }
+
+  /* Tab strips scroll sideways on touch without showing a scrollbar. */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   .ruled {
     background-image:
       radial-gradient(60rem 32rem at 85% -10%, rgb(16 185 129 / 0.2), transparent 65%),
@@ -382,6 +537,15 @@
 [dir="rtl"] * {
   /* Letter-spacing breaks the joins between Arabic letters. */
   letter-spacing: 0 !important;
+}
+
+/* The logo's tracking is part of the mark; exempt it from the reset above. */
+[dir="rtl"] .logo-ar {
+  letter-spacing: -0.02em !important;
+}
+
+[dir="rtl"] .logo-en {
+  letter-spacing: 0.025em !important;
 }
 
 [dir="rtl"] em {
@@ -475,6 +639,15 @@
 
   .no-print {
     display: none !important;
+  }
+
+  /* Bills and receipts print the real table, never the phone-only cards. */
+  .rt-cards {
+    display: none !important;
+  }
+
+  .rt-table {
+    display: block !important;
   }
 
   .data-table th {

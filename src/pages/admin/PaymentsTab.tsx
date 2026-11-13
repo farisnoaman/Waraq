@@ -1,6 +1,7 @@
-import { Fragment, useState, type FormEvent } from 'react';
-import { Banknote, ChevronDown, Printer, Wallet } from 'lucide-react';
+import { useState, type FormEvent } from 'react';
+import { Banknote, Printer, Wallet } from 'lucide-react';
 import DocumentModal from '../../components/DocumentModal';
+import ResponsiveTable from '../../components/ResponsiveTable';
 import { Alert, Badge, Spinner } from '../../components/ui';
 import { api, ApiError } from '../../lib/api';
 import {
@@ -222,144 +223,137 @@ export default function PaymentsTab({ orders, sellerVat, isAdmin, reload }: OpsP
             <Stat label={t("Outstanding")} value={sar(round2(totals.due - totals.paid))} />
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-line bg-card">
-            <table className="data-table min-w-[820px]">
-              <thead>
-                <tr>
-                  <th scope="col" className="w-10">
-                    <span className="sr-only">{t("Expand")}</span>
-                  </th>
-                  <th scope="col">{t("Order")}</th>
-                  <th scope="col">{t("Buyer")}</th>
-                  <th scope="col" className="num">
-                    {t("Total due")}
-                  </th>
-                  <th scope="col" className="num">
-                    {t("Paid")}
-                  </th>
-                  <th scope="col" className="num">
-                    {t("Balance")}
-                  </th>
-                  <th scope="col">{t("Status")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((order) => {
-                  const payment = order.payment;
-                  const remaining = round2(Number(payment.total_due) - Number(payment.total_paid));
-                  const expanded = open.has(payment.id);
-                  return (
-                    <Fragment key={payment.id}>
-                      <tr className={expanded ? 'bg-paper-deep/40' : undefined}>
-                        <td>
-                          <button
-                            type="button"
-                            onClick={() => toggle(payment.id)}
-                            aria-expanded={expanded}
-                            aria-label={t("{0} installments for {1}", [expanded ? t("Hide") : t("Show"), order.reference])}
-                            className="grid h-9 w-9 place-items-center rounded-full hover:bg-paper-deep"
-                          >
-                            <ChevronDown
-                              className={`h-4 w-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
-                              aria-hidden="true"
-                            />
-                          </button>
-                        </td>
-                        <td>
-                          <p className="font-display text-lg tracking-wide">{order.reference}</p>
-                          <p className="text-xs text-muted">
-                            {payment.installments.length}{' '}
-                            {payment.installments.length === 1 ? t("installment") : t("installments")}
-                          </p>
-                        </td>
-                        <td>
-                          <p className="font-semibold">{order.buyer_name}</p>
-                          <p className="text-xs text-muted">{order.buyer_company ?? order.city}</p>
-                        </td>
-                        <td className="num font-semibold">{sar(payment.total_due)}</td>
-                        <td className="num">{sar(payment.total_paid)}</td>
-                        <td className="num font-semibold">{sar(remaining)}</td>
-                        <td>
-                          <Badge tone={PAYMENT_STATUS_TONE[payment.status]}>
-                            {t(PAYMENT_STATUS_LABEL[payment.status])}
-                          </Badge>
-                        </td>
-                      </tr>
-                      {expanded && (
-                        <tr>
-                          <td colSpan={7} className="bg-paper/60 !p-4 sm:!p-5">
-                            <div className="space-y-4">
-                              {payment.installments.length === 0 ? (
-                                <p className="text-sm text-muted">
-                                  {t("No installments recorded yet for this payment.")}
-                                </p>
-                              ) : (
-                                <div className="overflow-x-auto rounded-xl border border-line bg-white">
-                                  <table className="data-table min-w-[720px]">
-                                    <thead>
-                                      <tr>
-                                        <th scope="col">{t("Receipt no.")}</th>
-                                        <th scope="col">{t("Received on")}</th>
-                                        <th scope="col">{t("Received by")}</th>
-                                        <th scope="col">{t("Method · reference")}</th>
-                                        <th scope="col" className="num">
-                                          {t("Amount")}
-                                        </th>
-                                        <th scope="col" className="num">
-                                          {t("Balance after")}
-                                        </th>
-                                        <th scope="col">
-                                          <span className="sr-only">{t("Receipt")}</span>
-                                        </th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {payment.installments.map((installment) => (
-                                        <tr key={installment.id}>
-                                          <td className="font-semibold">{installment.receipt_number}</td>
-                                          <td>{formatDateTime(installment.created_at)}</td>
-                                          <td>{installment.receiver_name}</td>
-                                          <td>
-                                            {t(PAYMENT_METHOD_LABEL[installment.method])}
-                                            {installment.receiver_reference
-                                              ? ` · ${installment.receiver_reference}`
-                                              : ''}
-                                          </td>
-                                          <td className="num font-semibold">{sar(installment.amount)}</td>
-                                          <td className="num">{sar(installment.balance_after)}</td>
-                                          <td className="num">
-                                            <button
-                                              type="button"
-                                              className="btn btn-outline btn-sm"
-                                              onClick={() => setReceipt({ order, installment })}
-                                            >
-                                              <Printer className="h-4 w-4" aria-hidden="true" />
-                                              {t("Print receipt")}
-                                            </button>
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              )}
-                              {remaining > 0 ? (
-                                <InstallmentForm order={order} remaining={remaining} reload={reload} />
-                              ) : (
-                                <Alert tone="success">
-                                  {t("This order is paid in full and has been marked completed.")}
-                                </Alert>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
+          <ResponsiveTable
+            rows={rows}
+            getRowKey={(order) => order.payment.id}
+            minWidth={820}
+            isExpanded={(order) => open.has(order.payment.id)}
+            onToggle={(order) => toggle(order.payment.id)}
+            expandAria={(order, expanded) =>
+              t("{0} installments for {1}", [expanded ? t("Hide") : t("Show"), order.reference])
+            }
+            expandedContent={(order) => {
+              const remaining = round2(Number(order.payment.total_due) - Number(order.payment.total_paid));
+              return (
+                <div className="space-y-4">
+                  {order.payment.installments.length === 0 ? (
+                    <p className="text-sm text-muted">
+                      {t("No installments recorded yet for this payment.")}
+                    </p>
+                  ) : (
+                    <ResponsiveTable
+                      nested
+                      rows={order.payment.installments}
+                      getRowKey={(installment) => installment.id}
+                      minWidth={720}
+                      columns={[
+                        {
+                          label: t("Receipt no."),
+                          primary: true,
+                          render: (installment) => (
+                            <span className="font-semibold">{installment.receipt_number}</span>
+                          ),
+                        },
+                        {
+                          label: t("Received on"),
+                          render: (installment) => formatDateTime(installment.created_at),
+                        },
+                        { label: t("Received by"), render: (installment) => installment.receiver_name },
+                        {
+                          label: t("Method · reference"),
+                          render: (installment) => (
+                            <>
+                              {t(PAYMENT_METHOD_LABEL[installment.method])}
+                              {installment.receiver_reference
+                                ? ` · ${installment.receiver_reference}`
+                                : ''}
+                            </>
+                          ),
+                        },
+                        {
+                          label: t("Amount"),
+                          num: true,
+                          render: (installment) => (
+                            <span className="font-semibold">{sar(installment.amount)}</span>
+                          ),
+                        },
+                        {
+                          label: t("Balance after"),
+                          num: true,
+                          render: (installment) => sar(installment.balance_after),
+                        },
+                      ]}
+                      actions={(installment) => (
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-sm"
+                          onClick={() => setReceipt({ order, installment })}
+                        >
+                          <Printer className="h-4 w-4" aria-hidden="true" />
+                          {t("Print receipt")}
+                        </button>
                       )}
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    />
+                  )}
+                  {remaining > 0 ? (
+                    <InstallmentForm order={order} remaining={remaining} reload={reload} />
+                  ) : (
+                    <Alert tone="success">
+                      {t("This order is paid in full and has been marked completed.")}
+                    </Alert>
+                  )}
+                </div>
+              );
+            }}
+            columns={[
+              {
+                label: t("Order"),
+                primary: true,
+                render: (order) => (
+                  <>
+                    <p className="font-display text-lg tracking-wide">{order.reference}</p>
+                    <p className="text-xs text-muted">
+                      {order.payment.installments.length}{' '}
+                      {order.payment.installments.length === 1 ? t("installment") : t("installments")}
+                    </p>
+                  </>
+                ),
+              },
+              {
+                label: t("Buyer"),
+                primary: true,
+                render: (order) => (
+                  <>
+                    <p className="font-semibold">{order.buyer_name}</p>
+                    <p className="text-xs text-muted">{order.buyer_company ?? order.city}</p>
+                  </>
+                ),
+              },
+              {
+                label: t("Total due"),
+                num: true,
+                render: (order) => <span className="font-semibold">{sar(order.payment.total_due)}</span>,
+              },
+              { label: t("Paid"), num: true, render: (order) => sar(order.payment.total_paid) },
+              {
+                label: t("Balance"),
+                num: true,
+                render: (order) => (
+                  <span className="font-semibold">
+                    {sar(round2(Number(order.payment.total_due) - Number(order.payment.total_paid)))}
+                  </span>
+                ),
+              },
+              {
+                label: t("Status"),
+                render: (order) => (
+                  <Badge tone={PAYMENT_STATUS_TONE[order.payment.status]}>
+                    {t(PAYMENT_STATUS_LABEL[order.payment.status])}
+                  </Badge>
+                ),
+              },
+            ]}
+          />
         </>
       )}
 

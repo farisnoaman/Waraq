@@ -12,6 +12,7 @@ import {
   TextField,
 } from '../../components/ui';
 import { api, ApiError, errorMessage, invalidate, useApi } from '../../lib/api';
+import ResponsiveTable from '../../components/ResponsiveTable';
 import { percent, sar } from '../../lib/format';
 import type { Category, Product, Spec } from '../../lib/types';
 import { schemas, validate, type FieldErrors } from '../../lib/validation';
@@ -706,103 +707,108 @@ export default function CatalogTab() {
                 {needle ? t("Try a different name, SKU or category.") : t("Add your first product to get started.")}
               </EmptyState>
             ) : (
-              <div className="overflow-x-auto rounded-2xl border border-line bg-card">
-                <table className="data-table min-w-[860px]">
-                  <thead>
-                    <tr>
-                      <th scope="col">{t("Product")}</th>
-                      <th scope="col">{t("Category / project")}</th>
-                      <th scope="col" className="num">
-                        {t("Unit price and VAT")}
-                      </th>
-                      <th scope="col" className="num">
-                        {t("MOQ")}
-                      </th>
-                      <th scope="col">{t("Status")}</th>
-                      <th scope="col">
-                        <span className="sr-only">{t("Actions")}</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visible.map((product) => (
-                      <tr key={product.id}>
-                        <td>
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={product.image}
-                              alt=""
-                              loading="lazy"
-                              className="h-12 w-12 shrink-0 rounded-lg object-cover"
-                            />
-                            <div>
-                              <p className="font-semibold">{t(product.name)}</p>
-                              <p className="text-xs text-muted">
-                                {product.sku} · {t(product.pack_unit)}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <p>{t(categoryById.get(product.category_id)?.name ?? '—')}</p>
-                          {product.project_category_id && (
-                            <p className="text-xs text-muted">
-                              {t("Project:")}{' '}{categoryById.get(product.project_category_id)?.name}
-                            </p>
-                          )}
-                        </td>
-                        <td className="num">
-                          <p className="font-semibold">{sar(product.unit_price)}</p>
+              <ResponsiveTable
+                rows={visible}
+                getRowKey={(product) => product.id}
+                minWidth={860}
+                columns={[
+                  {
+                    label: t("Product"),
+                    primary: true,
+                    render: (product) => (
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={product.image}
+                          alt=""
+                          loading="lazy"
+                          className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                        />
+                        <div>
+                          <p className="font-semibold">{t(product.name)}</p>
                           <p className="text-xs text-muted">
-                            + {percent(product.vat_rate)}{' '}{t("VAT (")}{sar(product.vat_value)})
+                            {product.sku} · {t(product.pack_unit)}
                           </p>
-                        </td>
-                        <td className="num">
-                          <p className="font-semibold">{product.moq}</p>
-                          {product.min_order && <p className="text-xs text-muted">{t(product.min_order)}</p>}
-                        </td>
-                        <td>
-                          <div className="flex flex-wrap gap-1.5">
-                            <StockBadge inStock={product.in_stock} />
-                            {product.featured && <Badge tone="brass">{t("Featured")}</Badge>}
-                          </div>
-                        </td>
-                        <td>
-                          <div className="flex justify-end gap-1">
-                            <button
-                              type="button"
-                              onClick={() => openProduct(toForm(product))}
-                              aria-label={t("Edit {0}", [product.name])}
-                              className="grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-mint hover:text-primary-strong"
-                            >
-                              <Pencil className="h-4 w-4" aria-hidden="true" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => void remove('products', product.id, product.name)}
-                              disabled={deleting !== null}
-                              aria-label={t("Delete {0}", [product.name])}
-                              className="grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-danger/10 hover:text-danger disabled:opacity-50"
-                            >
-                              {deleting === `products-${product.id}` ? (
-                                <Spinner />
-                              ) : (
-                                <Trash2 className="h-4 w-4" aria-hidden="true" />
-                              )}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        </div>
+                      </div>
+                    ),
+                  },
+                  {
+                    label: t("Category / project"),
+                    render: (product) => (
+                      <>
+                        <p>{t(categoryById.get(product.category_id)?.name ?? '—')}</p>
+                        {product.project_category_id && (
+                          <p className="text-xs text-muted">
+                            {t("Project:")}{' '}{categoryById.get(product.project_category_id)?.name}
+                          </p>
+                        )}
+                      </>
+                    ),
+                  },
+                  {
+                    label: t("Unit price and VAT"),
+                    num: true,
+                    render: (product) => (
+                      <>
+                        <p className="font-semibold">{sar(product.unit_price)}</p>
+                        <p className="text-xs text-muted">
+                          + {percent(product.vat_rate)}{' '}{t("VAT (")}{sar(product.vat_value)})
+                        </p>
+                      </>
+                    ),
+                  },
+                  {
+                    label: t("MOQ"),
+                    num: true,
+                    render: (product) => (
+                      <>
+                        <p className="font-semibold">{product.moq}</p>
+                        {product.min_order && <p className="text-xs text-muted">{t(product.min_order)}</p>}
+                      </>
+                    ),
+                  },
+                  {
+                    label: t("Status"),
+                    render: (product) => (
+                      <div className="flex flex-wrap gap-1.5">
+                        <StockBadge inStock={product.in_stock} />
+                        {product.featured && <Badge tone="brass">{t("Featured")}</Badge>}
+                      </div>
+                    ),
+                  },
+                ]}
+                actions={(product) => (
+                  <div className="flex justify-end gap-1">
+                    <button
+                      type="button"
+                      onClick={() => openProduct(toForm(product))}
+                      aria-label={t("Edit {0}", [product.name])}
+                      className="grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-mint hover:text-primary-strong"
+                    >
+                      <Pencil className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void remove('products', product.id, product.name)}
+                      disabled={deleting !== null}
+                      aria-label={t("Delete {0}", [product.name])}
+                      className="grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                    >
+                      {deleting === `products-${product.id}` ? (
+                        <Spinner />
+                      ) : (
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      )}
+                    </button>
+                  </div>
+                )}
+              />
             )}
 
             <h3 className="mt-10 text-2xl">
               {t("Categories")}{' '}<span className="text-muted">({allCategories.length})</span>
             </h3>
-            <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {allCategories.map((category) => {
                 const used = (products.data ?? []).filter(
                   (p) => p.category_id === category.id || p.project_category_id === category.id,

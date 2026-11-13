@@ -262,7 +262,7 @@ export default function Home() {
               <RevealItem
                 key={promise.title}
                 delay={i * 0.06}
-                className="grid gap-2 border-b border-line py-6 sm:grid-cols-[3.5rem_13rem_1fr] sm:items-baseline sm:gap-6"
+                className="grid grid-cols-1 gap-2 border-b border-line py-6 sm:grid-cols-[3.5rem_13rem_1fr] sm:items-baseline sm:gap-6"
               >
                 <span className="font-display text-xl text-brass">
                   {String(i + 1).padStart(2, '0')}
@@ -364,7 +364,7 @@ export default function Home() {
             {services.error ? (
               <ErrorPanel dark message={services.error} onRetry={services.reload} />
             ) : services.loading ? (
-              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-6">
+              <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-6">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="space-y-3 border-t border-white/15 pt-6">
                     <div className="skeleton skeleton-dark h-10 w-10 rounded-full" />
@@ -374,7 +374,7 @@ export default function Home() {
                 ))}
               </div>
             ) : (
-              <ol className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-6">
+              <ol className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-6">
                 {steps.map((step, i) => {
                   const Icon = serviceIcon(step.icon);
                   return (
@@ -422,13 +422,13 @@ export default function Home() {
           {products.error ? (
             <ErrorPanel message={products.error} onRetry={products.reload} />
           ) : products.loading ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {Array.from({ length: 4 }).map((_, i) => (
                 <ProductCardSkeleton key={i} />
               ))}
             </div>
           ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {featured.map((product, i) => (
                 <Reveal key={product.id} delay={i * 0.06} className="h-full">
                   <ProductCard

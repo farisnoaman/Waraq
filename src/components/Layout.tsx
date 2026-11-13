@@ -20,9 +20,18 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useRequestList } from '../contexts/RequestListContext';
 import { useInstallPrompt, useOnline } from '../lib/pwa';
-import { PHONE_DISPLAY, SITE_DOMAIN, SITE_EMAIL, whatsappLink } from '../lib/site';
+import {
+  PHONE_DISPLAY,
+  SITE_DOMAIN,
+  SITE_EMAIL,
+  SITE_POSTAL_CODE,
+  SITE_SHORT_ADDRESS,
+  siteAddress,
+  whatsappLink,
+} from '../lib/site';
 import { ROLE_LABEL } from '../lib/format';
 import Logo from './Logo';
+import NotificationBell from './NotificationBell';
 import WhatsAppIcon from './WhatsAppIcon';
 import { t, toggleLang, useLang } from '../lib/i18n';
 
@@ -51,7 +60,7 @@ function InstallButton() {
       {showHelp && (
         <span
           role="status"
-          className="absolute end-0 top-full z-50 mt-2 w-64 rounded-xl bg-card p-3 text-start text-xs leading-relaxed text-ink shadow-lg"
+          className="absolute end-0 top-full z-50 mt-2 w-[min(16rem,calc(100vw-2rem))] rounded-xl bg-card p-3 text-start text-xs leading-relaxed text-ink shadow-lg"
         >
           {t("Open your browser menu and choose")}{' '}<strong>{t("Install app")}</strong>{' '}{t("or")}{' '}
           <strong>{t("Add to Home Screen")}</strong>{t(". Waraq Pro then opens like an app and keeps your orders available offline.")}
@@ -71,8 +80,8 @@ function TopBar() {
       <div className="container-x flex min-h-9 flex-wrap items-center justify-between gap-x-4 gap-y-1 py-1.5 text-[13px]">
         <p className="flex items-center gap-1.5">
           <MapPin className="h-3.5 w-3.5 text-brass-soft" aria-hidden="true" />
-          <span className="sm:hidden">{t("Jeddah ·")}{' '}{SITE_DOMAIN}</span>
-          <span className="hidden sm:inline">{t("Jeddah, Kingdom of Saudi Arabia ·")}{' '}{SITE_DOMAIN}</span>
+          <span className="sm:hidden">{t("Riyadh ·")}{' '}{SITE_DOMAIN}</span>
+          <span className="hidden sm:inline">{t("Riyadh, Kingdom of Saudi Arabia ·")}{' '}{SITE_DOMAIN}</span>
         </p>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <InstallButton />
@@ -160,8 +169,8 @@ function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-paper/92 backdrop-blur-md print:hidden">
-      <div className="container-x flex h-[68px] items-center justify-between gap-4">
-        <Link to="/" className="rounded-lg">
+      <div className="container-x flex h-16 items-center justify-between gap-2 sm:h-[68px] sm:gap-4">
+        <Link to="/" className="shrink-0 rounded-lg">
           <Logo />
         </Link>
 
@@ -193,8 +202,10 @@ function Header() {
           </ul>
         </nav>
 
-        <div className="flex items-center gap-2">
-          {/* Language toggle: Arabic (default, right-to-left) <-> English. */}
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <NotificationBell />
+          {/* Language toggle: Arabic (default, right-to-left) <-> English.
+              On phones it moves into the menu below to keep one tidy row. */}
           <button
             type="button"
             onClick={toggleLang}
@@ -202,17 +213,17 @@ function Header() {
               lang === 'ar' ? 'EN — Switch to English' : 'عربي — التبديل إلى العربية'
             }
             title={lang === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
-            className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-line px-3 text-sm font-semibold text-ink transition-colors hover:bg-paper-deep"
+            className="hidden h-11 shrink-0 items-center gap-1.5 rounded-full border border-line px-3 text-sm font-semibold text-ink transition-colors hover:bg-paper-deep sm:inline-flex"
           >
             <Earth className="h-[18px] w-[18px] text-primary" aria-hidden="true" />
             <span lang={lang === 'ar' ? 'en' : 'ar'}>{lang === 'ar' ? 'EN' : 'عربي'}</span>
           </button>
           <Link
             to="/request"
-            className="btn btn-primary px-3 sm:px-5"
+            className="btn btn-primary px-2.5 sm:px-5"
             aria-label={t("Request list, {0} {1}", [count, count === 1 ? t("item") : t("items")])}
           >
-            <ClipboardList className="h-[18px] w-[18px]" aria-hidden="true" />
+            <ClipboardList className="hidden h-[18px] w-[18px] sm:block" aria-hidden="true" />
             <span className="hidden sm:inline">{t("Request list")}</span>
             <span
               className="grid h-6 min-w-6 place-items-center rounded-full bg-white/20 px-1.5 text-xs font-bold tabular-nums"
@@ -266,6 +277,27 @@ function Header() {
                 </li>
               ))}
               <li className="border-b border-line last:border-b-0">
+                <button
+                  type="button"
+                  onClick={toggleLang}
+                  aria-label={
+                    lang === 'ar' ? 'EN — Switch to English' : 'عربي — التبديل إلى العربية'
+                  }
+                  className="flex min-h-14 w-full items-center justify-between text-ink"
+                >
+                  <span className="flex items-center gap-3">
+                    <Earth className="h-5 w-5 text-primary" aria-hidden="true" />
+                    <span className="font-display text-2xl">{t("Language")}</span>
+                  </span>
+                  <span
+                    lang={lang === 'ar' ? 'en' : 'ar'}
+                    className="text-base font-semibold text-primary-strong"
+                  >
+                    {lang === 'ar' ? 'English' : 'عربي'}
+                  </span>
+                </button>
+              </li>
+              <li className="border-b border-line last:border-b-0">
                 {profile ? (
                   <button
                     type="button"
@@ -297,6 +329,7 @@ function Header() {
 
 function Footer() {
   const year = new Date().getFullYear();
+  const lang = useLang();
   const links = [
     { to: '/', label: 'Home' },
     { to: '/products', label: 'Products' },
@@ -309,9 +342,9 @@ function Footer() {
     <footer className="on-dark bg-forest text-paper print:hidden">
       <div className="container-x grid gap-12 py-16 md:grid-cols-12">
         <div className="md:col-span-5">
-          <Logo tone="dark" />
+          <Logo tone="dark" large />
           <p className="mt-5 max-w-sm text-paper/70">
-            {t("Waraq Pro (")}{SITE_DOMAIN}{t(") is a Jeddah-based supply company established in 2015. Paper, packaging and office products, from your request to delivery at your door.")}
+            {t("Waraq Pro (")}{SITE_DOMAIN}{t(") is a Riyadh-based supply company established in 2015. Paper, packaging and office products, from your request to delivery at your door.")}
           </p>
         </div>
         <nav aria-label={t("Footer")} className="md:col-span-3">
@@ -356,9 +389,14 @@ function Footer() {
               <Globe className="h-5 w-5 shrink-0 text-brass-soft" aria-hidden="true" />
               {SITE_DOMAIN}
             </li>
-            <li className="flex items-center gap-3 text-paper/85">
-              <MapPin className="h-5 w-5 shrink-0 text-brass-soft" aria-hidden="true" />
-              {t("Jeddah, Kingdom of Saudi Arabia")}
+            <li className="flex items-start gap-3 text-paper/85">
+              <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-brass-soft" aria-hidden="true" />
+              <span>
+                {siteAddress(lang)}
+                <span className="mt-1 block text-sm text-paper/60">
+                  {t("Postal code")}{' '}{SITE_POSTAL_CODE} · {t("Short address")}{' '}{SITE_SHORT_ADDRESS}
+                </span>
+              </span>
             </li>
           </ul>
         </div>
@@ -368,7 +406,7 @@ function Footer() {
           <p>
             © {year}{' '}{t("Waraq Pro (")}{SITE_DOMAIN}{t("). All rights reserved.")}
           </p>
-          <p>{t("Established 2015 in Jeddah ·")}{' '}{PHONE_DISPLAY}</p>
+          <p>{t("Established 2015 in Riyadh ·")}{' '}{PHONE_DISPLAY}</p>
         </div>
       </div>
     </footer>
@@ -381,7 +419,7 @@ function Toast() {
     <div
       role="status"
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-center px-4 print:hidden"
+      className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex justify-center px-4 sm:bottom-5 print:hidden"
     >
       <AnimatePresence>
         {notice && (

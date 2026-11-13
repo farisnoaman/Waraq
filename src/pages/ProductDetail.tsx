@@ -77,7 +77,7 @@ export default function ProductDetail() {
         <div className="flex h-[3.875rem] items-center lg:h-9">
           <div className="skeleton h-4 w-64" />
         </div>
-        <div className="mt-6 grid min-h-[90.25rem] gap-10 lg:min-h-[58rem] lg:grid-cols-2">
+        <div className="mt-6 grid min-h-[90.25rem] grid-cols-1 gap-10 lg:min-h-[58rem] lg:grid-cols-2">
           <div className="skeleton aspect-[4/3] rounded-2xl" />
           <div className="min-h-[70rem] space-y-4 lg:min-h-[57.5rem]">
             <div className="skeleton h-4 w-32" />
@@ -154,7 +154,7 @@ export default function ProductDetail() {
           )}
         </div>
 
-        <div className="mt-6 grid min-h-[90.25rem] gap-10 lg:min-h-[58rem] lg:grid-cols-2 lg:gap-16">
+        <div className="mt-6 grid min-h-[90.25rem] grid-cols-1 gap-10 lg:min-h-[58rem] lg:grid-cols-2 lg:gap-16">
           <div className="lg:sticky lg:top-24 lg:self-start">
             <div className="overflow-hidden rounded-2xl border border-line bg-paper-deep">
               <img
@@ -298,7 +298,7 @@ export default function ProductDetail() {
             <h2 className="text-3xl sm:text-4xl">
               {t("More in")}{' '}{category ? t(category.name) : t("this category")}
             </h2>
-            <ul className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {related.map((item) => (
                 <li key={item.id}>
                   <ProductCard product={item} categoryName={category?.name} />

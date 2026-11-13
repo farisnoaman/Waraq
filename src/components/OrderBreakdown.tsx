@@ -2,11 +2,16 @@ import { percent, sar } from '../lib/format';
 import type { Order } from '../lib/types';
 import { t } from '../lib/i18n';
 
-/** Line items with the per-item VAT breakdown used on bills, receipts and order cards. */
+/**
+ * Line items with the per-item VAT breakdown, used on bills, receipts and
+ * order cards. Tables on screens ≥768px, a card per item on phones; when the
+ * document is printed, the print rules in index.css force the table variant.
+ */
 export function OrderItemsTable({ order }: { order: Order }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-line bg-white">
-      <table className="data-table min-w-[640px]">
+    <>
+      <div className="rt-table hidden overflow-x-auto rounded-xl border border-line bg-white md:block">
+        <table className="data-table min-w-[640px]">
         <thead>
           <tr>
             <th scope="col">{t("Item")}</th>
@@ -52,8 +57,50 @@ export function OrderItemsTable({ order }: { order: Order }) {
             </tr>
           ))}
         </tbody>
-      </table>
-    </div>
+        </table>
+      </div>
+
+      <ul className="rt-cards space-y-2.5 md:hidden">
+        {order.items.map((item) => (
+          <li key={item.id} className="rounded-xl border border-line bg-white p-4">
+            <p className="font-semibold text-ink">{t(item.product_name)}</p>
+            <p className="mt-0.5 text-xs text-muted">
+              {item.sku} · {t(item.pack_unit)}{' '}{t("· MOQ")}{' '}{item.moq}
+            </p>
+            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-muted">{t("Qty")}</dt>
+                <dd className="font-semibold tabular-nums">{item.qty}</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-muted">{t("Unit price")}</dt>
+                <dd className="tabular-nums">{sar(item.unit_price)}</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-muted">{t("Subtotal")}</dt>
+                <dd className="tabular-nums">{sar(item.line_subtotal)}</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-muted">{t("VAT %")}</dt>
+                <dd className="font-semibold tabular-nums text-primary-strong">{percent(item.vat_rate)}</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-muted">{t("VAT / item")}</dt>
+                <dd className="tabular-nums text-muted">{sar(item.vat_per_item)}</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-muted">{t("VAT value")}</dt>
+                <dd className="tabular-nums">{sar(item.line_vat)}</dd>
+              </div>
+            </dl>
+            <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-line pt-2">
+              <span className="text-sm text-muted">{t("Total incl. VAT")}</span>
+              <span className="font-bold tabular-nums">{sar(item.line_total)}</span>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
 

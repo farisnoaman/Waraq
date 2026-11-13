@@ -142,7 +142,7 @@ export default function Services() {
       </section>
 
       <section className="border-y border-line bg-card">
-        <div className="container-x grid items-center gap-10 py-16 lg:grid-cols-2 lg:gap-16 lg:py-24">
+        <div className="container-x grid grid-cols-1 items-center gap-10 py-16 lg:grid-cols-2 lg:gap-16 lg:py-24">
           <Reveal>
             <div className="overflow-hidden rounded-2xl bg-paper-deep">
               <img
@@ -180,13 +180,13 @@ export default function Services() {
             <SectionHeading eyebrow={t("Also available")} title={t("Supporting services")} />
           </Reveal>
           {services.loading ? (
-            <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="skeleton h-52 rounded-2xl" />
               ))}
             </div>
           ) : (
-            <ul className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <ul className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {extras.map((service, i) => {
                 const Icon = serviceIcon(service.icon);
                 return (

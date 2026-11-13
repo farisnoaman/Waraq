@@ -8,7 +8,13 @@ import { schemas, validate, type FieldErrors } from '../../lib/validation';
 import { TabIntro, useAction } from './shared';
 import { t } from '../../lib/i18n';
 
-function ProductVatRow({ product, defaultVat }: { product: Product; defaultVat: number }) {
+/**
+ * Edit state for one product's price and VAT. Shared by the desktop table row
+ * and the phone card, which are separate components (a `<tr>` and an `<li>`
+ * cannot live in the same parent), so each keeps its own copy — only one is
+ * visible at a time.
+ */
+function useProductVat(product: Product, defaultVat: number) {
   const [price, setPrice] = useState(String(product.unit_price));
   const [vat, setVat] = useState(
     product.vat_rate_override == null ? '' : String(product.vat_rate_override),
@@ -47,6 +53,12 @@ function ProductVatRow({ product, defaultVat }: { product: Product; defaultVat: 
     }
   };
 
+  return { price, setPrice, vat, setVat, saving, state, numericPrice, vatValue, dirty, save };
+}
+
+/** Desktop: one row of the VAT-per-product table. */
+function ProductVatRow({ product, defaultVat }: { product: Product; defaultVat: number }) {
+  const v = useProductVat(product, defaultVat);
   return (
     <tr>
       <td>
@@ -63,8 +75,8 @@ function ProductVatRow({ product, defaultVat }: { product: Product; defaultVat: 
           id={`vat-price-${product.id}`}
           className="field-input field-sm w-28 tabular-nums"
           inputMode="decimal"
-          value={price}
-          onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, '').slice(0, 10))}
+          value={v.price}
+          onChange={(e) => v.setPrice(e.target.value.replace(/[^\d.]/g, '').slice(0, 10))}
         />
       </td>
       <td>
@@ -76,34 +88,109 @@ function ProductVatRow({ product, defaultVat }: { product: Product; defaultVat: 
           className="field-input field-sm w-24 tabular-nums"
           inputMode="decimal"
           placeholder={t("{0} (default)", [defaultVat])}
-          value={vat}
-          onChange={(e) => setVat(e.target.value.replace(/[^\d.]/g, '').slice(0, 6))}
+          value={v.vat}
+          onChange={(e) => v.setVat(e.target.value.replace(/[^\d.]/g, '').slice(0, 6))}
         />
       </td>
-      <td className="num">{sar(vatValue)}</td>
-      <td className="num font-semibold">{sar(round2(numericPrice + vatValue))}</td>
+      <td className="num">{sar(v.vatValue)}</td>
+      <td className="num font-semibold">{sar(round2(v.numericPrice + v.vatValue))}</td>
       <td>
         <div className="flex items-center gap-2">
           <button
             type="button"
             className="btn btn-outline btn-sm"
-            disabled={saving || !dirty}
-            onClick={() => void save()}
+            disabled={v.saving || !v.dirty}
+            onClick={() => void v.save()}
           >
-            {saving ? <Spinner /> : <Save className="h-4 w-4" aria-hidden="true" />}
+            {v.saving ? <Spinner /> : <Save className="h-4 w-4" aria-hidden="true" />}
             {t("Save")}
           </button>
-          {state && (
+          {v.state && (
             <span
               role="status"
-              className={`text-xs font-semibold ${state.tone === 'ok' ? 'text-primary-strong' : 'text-danger'}`}
+              className={`text-xs font-semibold ${v.state.tone === 'ok' ? 'text-primary-strong' : 'text-danger'}`}
             >
-              {state.text}
+              {v.state.text}
             </span>
           )}
         </div>
       </td>
     </tr>
+  );
+}
+
+/** Phone: the same editor as a stacked card. */
+function ProductVatCard({ product, defaultVat }: { product: Product; defaultVat: number }) {
+  const v = useProductVat(product, defaultVat);
+  return (
+    <li className="rounded-2xl border border-line bg-card p-4">
+      <p className="font-semibold">{t(product.name)}</p>
+      <p className="mt-0.5 text-xs text-muted">
+        {product.sku}{' '}{t("· MOQ")}{' '}{product.moq}
+      </p>
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <div>
+          <label
+            htmlFor={`vat-card-price-${product.id}`}
+            className="mb-1.5 block text-sm font-semibold"
+          >
+            {t("Unit price excl. VAT (SAR)")}
+          </label>
+          <input
+            id={`vat-card-price-${product.id}`}
+            className="field-input field-sm w-full tabular-nums"
+            inputMode="decimal"
+            value={v.price}
+            onChange={(e) => v.setPrice(e.target.value.replace(/[^\d.]/g, '').slice(0, 10))}
+          />
+        </div>
+        <div>
+          <label
+            htmlFor={`vat-card-rate-${product.id}`}
+            className="mb-1.5 block text-sm font-semibold"
+          >
+            {t("VAT %")}
+          </label>
+          <input
+            id={`vat-card-rate-${product.id}`}
+            className="field-input field-sm w-full tabular-nums"
+            inputMode="decimal"
+            placeholder={t("{0} (default)", [defaultVat])}
+            value={v.vat}
+            onChange={(e) => v.setVat(e.target.value.replace(/[^\d.]/g, '').slice(0, 6))}
+          />
+        </div>
+      </div>
+      <dl className="mt-3 space-y-1.5 text-sm">
+        <div className="flex items-baseline justify-between gap-4">
+          <dt className="text-muted">{t("VAT value / item")}</dt>
+          <dd className="tabular-nums">{sar(v.vatValue)}</dd>
+        </div>
+        <div className="flex items-baseline justify-between gap-4">
+          <dt className="text-muted">{t("Price incl. VAT")}</dt>
+          <dd className="font-semibold tabular-nums">{sar(round2(v.numericPrice + v.vatValue))}</dd>
+        </div>
+      </dl>
+      <div className="mt-3 flex items-center gap-2 border-t border-line pt-3">
+        <button
+          type="button"
+          className="btn btn-outline btn-sm"
+          disabled={v.saving || !v.dirty}
+          onClick={() => void v.save()}
+        >
+          {v.saving ? <Spinner /> : <Save className="h-4 w-4" aria-hidden="true" />}
+          {t("Save")}
+        </button>
+        {v.state && (
+          <span
+            role="status"
+            className={`text-xs font-semibold ${v.state.tone === 'ok' ? 'text-primary-strong' : 'text-danger'}`}
+          >
+            {v.state.text}
+          </span>
+        )}
+      </div>
+    </li>
   );
 }
 
@@ -235,7 +322,7 @@ export default function SettingsTab() {
         <p className="mt-1 text-sm text-muted">
           {t("The default VAT applies to every product that does not have its own rate in the table below.")}
         </p>
-        <div className="mt-5 grid gap-5 sm:grid-cols-3">
+        <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <TextField
             id="set-vat"
             label={t("Default VAT (%)")}
@@ -292,34 +379,41 @@ export default function SettingsTab() {
           ) : products.loading ? (
             <div className="skeleton h-64 rounded-2xl" role="status" aria-label={t("Loading products")} />
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-line bg-card">
-              <table className="data-table min-w-[820px]">
-                <thead>
-                  <tr>
-                    <th scope="col">{t("Item and SKU")}</th>
-                    <th scope="col">{t("Unit price excl. VAT (SAR)")}</th>
-                    <th scope="col">{t("VAT %")}</th>
-                    <th scope="col" className="num">
-                      {t("VAT value / item")}
-                    </th>
-                    <th scope="col" className="num">
-                      {t("Price incl. VAT")}
-                    </th>
-                    <th scope="col">{t("Save")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(products.data ?? []).map((product) => (
-                    <ProductVatRow key={product.id} product={product} defaultVat={settings.vat_rate} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <div className="hidden overflow-x-auto rounded-2xl border border-line bg-card lg:block">
+                <table className="data-table min-w-[820px]">
+                  <thead>
+                    <tr>
+                      <th scope="col">{t("Item and SKU")}</th>
+                      <th scope="col">{t("Unit price excl. VAT (SAR)")}</th>
+                      <th scope="col">{t("VAT %")}</th>
+                      <th scope="col" className="num">
+                        {t("VAT value / item")}
+                      </th>
+                      <th scope="col" className="num">
+                        {t("Price incl. VAT")}
+                      </th>
+                      <th scope="col">{t("Save")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(products.data ?? []).map((product) => (
+                      <ProductVatRow key={product.id} product={product} defaultVat={settings.vat_rate} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <ul className="space-y-3 lg:hidden">
+                {(products.data ?? []).map((product) => (
+                  <ProductVatCard key={product.id} product={product} defaultVat={settings.vat_rate} />
+                ))}
+              </ul>
+            </>
           )}
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <form
           onSubmit={addTier}
           noValidate

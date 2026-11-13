@@ -53,6 +53,7 @@ export const ar: Record<string, string> = {
   "Request list": "قائمة الطلب",
   "Close menu": "إغلاق القائمة",
   "Open menu": "فتح القائمة",
+  "Language": "اللغة",
   "Mobile": "قائمة الجوال",
   "Sign out (": "تسجيل الخروج (",
   "Account sign in": "تسجيل الدخول إلى الحساب",
