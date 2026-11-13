@@ -30,18 +30,25 @@ export function setAccessToken(token: string | null) {
 interface Options {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
+  /** A multipart body. The browser sets the content type, with its boundary. */
+  form?: FormData;
   /** Set to false for public endpoints so responses stay cacheable offline. */
   auth?: boolean;
 }
 
 function send(path: string, options: Options, token: string | null): Promise<Response> {
   const headers: Record<string, string> = {};
+  const isForm = options.form !== undefined;
   if (options.body !== undefined) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = `Bearer ${token}`;
   return fetch(path, {
     method: options.method ?? 'GET',
     headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    body: isForm
+      ? options.form
+      : options.body !== undefined
+        ? JSON.stringify(options.body)
+        : undefined,
   });
 }
 
