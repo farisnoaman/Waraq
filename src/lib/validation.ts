@@ -1,5 +1,5 @@
 // Single source of truth for validation: the same Zod schemas the API uses.
-import { fieldErrors, schemas } from '../../api/_lib/schemas.js';
+import { fieldErrors, schemas } from '../../shared/schemas.js';
 import { t } from './i18n';
 
 export { schemas };
