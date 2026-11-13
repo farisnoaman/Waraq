@@ -26,11 +26,14 @@ import {
   SITE_EMAIL,
   SITE_POSTAL_CODE,
   SITE_SHORT_ADDRESS,
+  SITE_URL,
+  SITE_WWW,
   siteAddress,
   whatsappLink,
 } from '../lib/site';
 import { ROLE_LABEL } from '../lib/format';
 import Logo from './Logo';
+import InstallBanner from './InstallBanner';
 import NotificationBell from './NotificationBell';
 import WhatsAppIcon from './WhatsAppIcon';
 import { t, toggleLang, useLang } from '../lib/i18n';
@@ -150,7 +153,7 @@ function Header() {
     { to: '/contact', label: 'Contact', end: false },
     { to: '/buyer', label: 'Buyer Portal', end: false },
     ...(profile?.role === 'admin' || profile?.role === 'staff'
-      ? [{ to: '/admin', label: profile.role === 'staff' ? 'Staff Portal' : 'Admin', end: false }]
+      ? [{ to: '/admin', label: 'Staff Portal', end: false }]
       : []),
   ];
 
@@ -385,9 +388,16 @@ function Footer() {
                 {PHONE_DISPLAY}
               </a>
             </li>
-            <li className="flex items-center gap-3 text-paper/85">
-              <Globe className="h-5 w-5 shrink-0 text-brass-soft" aria-hidden="true" />
-              {SITE_DOMAIN}
+            <li>
+              <a
+                href={SITE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-3 text-paper/85 transition-colors hover:text-primary-bright"
+              >
+                <Globe className="h-5 w-5 shrink-0 text-brass-soft" aria-hidden="true" />
+                {SITE_WWW}
+              </a>
             </li>
             <li className="flex items-start gap-3 text-paper/85">
               <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-brass-soft" aria-hidden="true" />
@@ -541,6 +551,7 @@ export default function Layout() {
       </main>
       <Footer />
       <Toast />
+      <InstallBanner />
       <aside aria-label={t("Quick contact")}>
         <WhatsAppFab />
       </aside>

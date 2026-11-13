@@ -127,7 +127,7 @@ function DeliveryCard({ order, delivery, staff, isAdmin, me, reload }: CardProps
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h3 className="font-display text-2xl tracking-wide">{order.reference}</h3>
+            <h3 className="font-display text-xl tracking-wide sm:text-2xl">{order.reference}</h3>
             <Badge tone={DELIVERY_STATUS_TONE[delivery.status]}>
               {t(DELIVERY_STATUS_LABEL[delivery.status])}
             </Badge>
@@ -158,10 +158,10 @@ function DeliveryCard({ order, delivery, staff, isAdmin, me, reload }: CardProps
             </span>
           </p>
         </div>
-        <div className="text-start sm:text-end">
-          <p className="text-xs uppercase tracking-wider text-muted">{t("Order value (incl. VAT)")}</p>
-          <p className="font-display text-2xl font-semibold text-primary-strong">{sar(order.total)}</p>
-          <p className="text-sm text-muted">
+        <div className="w-full rounded-xl border border-line bg-card px-4 py-3 text-start sm:w-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:text-end">
+          <p className="text-[10px] uppercase tracking-wider text-muted sm:text-xs">{t("Order value (incl. VAT)")}</p>
+          <p className="font-display text-xl font-semibold text-primary-strong sm:text-2xl">{sar(order.total)}</p>
+          <p className="text-xs text-muted sm:text-sm">
             {order.items.length} {order.items.length === 1 ? t("line") : t("lines")} · {order.total_units}{' '}{t("units")}
           </p>
         </div>
@@ -246,7 +246,11 @@ function DeliveryCard({ order, delivery, staff, isAdmin, me, reload }: CardProps
             )}
           </div>
           <div className="flex flex-wrap gap-2.5 md:col-span-3">
-            <button type="submit" className="btn btn-primary btn-sm" disabled={action.busy !== null}>
+            <button
+              type="submit"
+              className="btn btn-primary btn-sm flex-1 sm:flex-none"
+              disabled={action.busy !== null}
+            >
               {action.busy === 'assign' ? <Spinner /> : <UserCheck className="h-4 w-4" aria-hidden="true" />}
               {delivery.status === 'draft'
                 ? t("Assign staff")
@@ -257,7 +261,7 @@ function DeliveryCard({ order, delivery, staff, isAdmin, me, reload }: CardProps
             {canDispatch && (
               <button
                 type="button"
-                className="btn btn-dark btn-sm"
+                className="btn btn-dark btn-sm flex-1 sm:flex-none"
                 disabled={action.busy !== null}
                 onClick={() => void step('dispatch')}
               >
@@ -288,7 +292,7 @@ function DeliveryCard({ order, delivery, staff, isAdmin, me, reload }: CardProps
               {canAccept && (
                 <button
                   type="button"
-                  className="btn btn-primary btn-sm"
+                  className="btn btn-primary btn-sm flex-1 sm:flex-none"
                   disabled={action.busy !== null}
                   onClick={() => void step('accept')}
                 >
@@ -299,7 +303,7 @@ function DeliveryCard({ order, delivery, staff, isAdmin, me, reload }: CardProps
               {canDispatch && (
                 <button
                   type="button"
-                  className="btn btn-primary btn-sm"
+                  className="btn btn-primary btn-sm flex-1 sm:flex-none"
                   disabled={action.busy !== null}
                   onClick={() => void step('dispatch')}
                 >
@@ -310,7 +314,7 @@ function DeliveryCard({ order, delivery, staff, isAdmin, me, reload }: CardProps
               {canDeliver && (
                 <button
                   type="button"
-                  className="btn btn-primary btn-sm"
+                  className="btn btn-primary btn-sm flex-1 sm:flex-none"
                   disabled={action.busy !== null}
                   onClick={() => void step('deliver')}
                 >

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CheckCircle2,
@@ -20,12 +20,149 @@ import {
   ORDER_STATUS_SHORT,
   ORDER_STATUS_TONE,
   ORDER_STATUSES,
+  round2,
   sar,
   ltr,
 } from '../../lib/format';
-import type { Order, OrderStatus } from '../../lib/types';
+import type { Order, OrderStatus, OrderItem, Product } from '../../lib/types';
 import { EmptyState, TabIntro, useAction, type OpsProps } from './shared';
 import { t } from '../../lib/i18n';
+
+/**
+ * Administrator price negotiation on a pending order: each line can drop to
+ * the product's minimum sell price, never below it. The gap from the list
+ * price is what the bill shows as the line discount.
+ */
+function PriceEditor({ order, reload }: { order: Order; reload: () => Promise<void> }) {
+  const action = useAction(reload);
+  const [floors, setFloors] = useState<Record<number, number | null>>({});
+  const [drafts, setDrafts] = useState<Record<number, string>>({});
+
+  // The floors come from the products the admin token can see.
+  useEffect(() => {
+    let active = true;
+    api<Product[]>('/api/products')
+      .then((list) => {
+        if (!active) return;
+        const map: Record<number, number | null> = {};
+        for (const product of list) map[product.id] = product.min_sell_price ?? null;
+        setFloors(map);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    setDrafts(
+      Object.fromEntries(order.items.map((item) => [item.id, String(item.unit_price)])) as Record<
+        number,
+        string
+      >,
+    );
+  }, [order.id, order.items]);
+
+  const floorOf = (item: OrderItem) => floors[item.product_id] ?? (item.list_unit_price || item.unit_price);
+  const listPriceOf = (item: OrderItem) => item.list_unit_price || item.unit_price;
+  const unitLabel = (item: OrderItem) => (item.unit_type === 'carton' ? t("carton") : t("unit"));
+
+  const changed = order.items.filter(
+    (item) => Number(drafts[item.id] ?? item.unit_price) !== Number(item.unit_price),
+  );
+
+  const save = async () => {
+    for (const item of changed) {
+      const value = Number(drafts[item.id]);
+      const list = listPriceOf(item);
+      const floor = floorOf(item);
+      if (!Number.isFinite(value) || value > list || value < floor) {
+        action.setError(
+          `${t(item.product_name)}: ${t("The price must be between {0} and {1}.", [sar(floor), sar(list)])}`,
+        );
+        return;
+      }
+    }
+    await action.run('save-prices', async () => {
+      for (const item of changed) {
+        await api('/api/orders', {
+          method: 'PUT',
+          body: {
+            id: order.id,
+            action: 'set_item_price',
+            item_id: item.id,
+            unit_price: Number(drafts[item.id]),
+          },
+        });
+      }
+    });
+  };
+
+  return (
+    <div className="rounded-xl border border-primary/30 bg-mint/30 p-4">
+      <p className="text-sm font-semibold text-primary-strong">{t("Adjust line prices")}</p>
+      <p className="mt-1 text-xs text-muted">
+        {t("Pending order: you may lower a line down to its minimum sell price. The reduction appears on the bill as a discount.")}
+      </p>
+      <ul className="mt-3 divide-y divide-line">
+        {order.items.map((item) => {
+          const list = listPriceOf(item);
+          const floor = floorOf(item);
+          const draft = drafts[item.id] ?? String(item.unit_price);
+          const value = Number(draft) || 0;
+          const discount = round2(Math.max(0, list - value) * item.qty);
+          const unitsLabel =
+            item.unit_type === 'carton' && item.units_per_carton
+              ? ` · ${item.qty} × ${item.units_per_carton} ${t("units")}`
+              : '';
+          return (
+            <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
+              <div className="min-w-0 text-sm">
+                <p className="font-semibold text-ink">{t(item.product_name)}</p>
+                <p className="text-xs text-muted">
+                  {t("List")}{' '}{sar(list)} · {t("Minimum")}{' '}{sar(floor)} ·{' '}
+                  {item.qty} {unitLabel(item)}
+                  {unitsLabel}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {discount > 0 && (
+                  <span className="text-xs font-semibold text-primary-strong">−{sar(discount)}</span>
+                )}
+                <label className="sr-only" htmlFor={`price-${item.id}`}>
+                  {t(item.product_name)}
+                </label>
+                <input
+                  id={`price-${item.id}`}
+                  className="field-input field-sm w-28 tabular-nums"
+                  inputMode="decimal"
+                  value={draft}
+                  onChange={(e) =>
+                    setDrafts((current) => ({
+                      ...current,
+                      [item.id]: e.target.value.replace(/[^\d.]/g, '').slice(0, 10),
+                    }))
+                  }
+                />
+                <span className="text-xs text-muted">/ {unitLabel(item)}</span>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {action.error && <Alert className="mt-3">{action.error}</Alert>}
+      <button
+        type="button"
+        className="btn btn-primary btn-sm mt-3"
+        disabled={action.busy !== null || changed.length === 0}
+        onClick={() => void save()}
+      >
+        {action.busy === 'save-prices' && <Spinner />}
+        {t("Save prices")}
+      </button>
+    </div>
+  );
+}
 
 export default function OrdersTab({ orders, sellerVat, isAdmin, reload }: OpsProps) {
   const [filter, setFilter] = useState<'all' | OrderStatus>('all');
@@ -135,7 +272,7 @@ export default function OrdersTab({ orders, sellerVat, isAdmin, reload }: OpsPro
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2.5">
-                        <h3 className="font-display text-2xl tracking-wide">{order.reference}</h3>
+                        <h3 className="font-display text-xl tracking-wide sm:text-2xl">{order.reference}</h3>
                         <Badge tone={ORDER_STATUS_TONE[order.status]}>
                           {t(ORDER_STATUS_LABEL[order.status])}
                         </Badge>
@@ -143,6 +280,16 @@ export default function OrdersTab({ orders, sellerVat, isAdmin, reload }: OpsPro
                           <Badge tone="mint">
                             <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
                             {t("Buyer confirmed reception")}
+                          </Badge>
+                        )}
+                        {order.promotion_name && order.promotion_discount > 0 && (
+                          <Badge tone="brass">
+                            {t("Promotion")}: {t(order.promotion_name)} −{sar(order.promotion_discount)}
+                          </Badge>
+                        )}
+                        {order.discount_total > 0 && !order.promotion_name && (
+                          <Badge tone="neutral">
+                            {t("Discounted prices")} −{sar(order.discount_total)}
                           </Badge>
                         )}
                       </div>
@@ -166,14 +313,14 @@ export default function OrdersTab({ orders, sellerVat, isAdmin, reload }: OpsPro
                         </p>
                       )}
                     </div>
-                    <div className="text-start sm:text-end">
-                      <p className="text-xs uppercase tracking-wider text-muted">
+                    <div className="w-full rounded-xl border border-line bg-card px-4 py-3 text-start sm:w-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:text-end">
+                      <p className="text-[10px] uppercase tracking-wider text-muted sm:text-xs">
                         {t("Final payable (incl. VAT)")}
                       </p>
-                      <p className="font-display text-2xl font-semibold text-primary-strong">
+                      <p className="font-display text-xl font-semibold text-primary-strong sm:text-2xl">
                         {sar(order.total)}
                       </p>
-                      <p className="text-sm text-muted">
+                      <p className="text-xs text-muted sm:text-sm">
                         {order.items.length} {order.items.length === 1 ? t("line") : t("lines")} ·{' '}
                         {order.total_units}{' '}{t("units")}
                       </p>
@@ -189,7 +336,7 @@ export default function OrdersTab({ orders, sellerVat, isAdmin, reload }: OpsPro
                   <div className="mt-5 flex flex-wrap items-center gap-2.5">
                     <button
                       type="button"
-                      className="btn btn-outline btn-sm"
+                      className="btn btn-outline btn-sm w-full sm:w-auto"
                       aria-expanded={expanded}
                       onClick={() => toggle(order.id)}
                     >
@@ -199,14 +346,18 @@ export default function OrdersTab({ orders, sellerVat, isAdmin, reload }: OpsPro
                       />
                       {expanded ? t("Hide items") : t("Items and VAT")}
                     </button>
-                    <button type="button" className="btn btn-outline btn-sm" onClick={() => setBill(order)}>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm flex-1 sm:flex-none"
+                      onClick={() => setBill(order)}
+                    >
                       <Printer className="h-4 w-4" aria-hidden="true" />
                       {t("Print order bill")}
                     </button>
                     {isAdmin && order.status === 'pending' && (
                       <button
                         type="button"
-                        className="btn btn-primary btn-sm"
+                        className="btn btn-primary btn-sm flex-1 sm:flex-none"
                         disabled={action.busy !== null}
                         onClick={() => void act(order, 'confirm')}
                       >
@@ -221,7 +372,7 @@ export default function OrdersTab({ orders, sellerVat, isAdmin, reload }: OpsPro
                     {isAdmin && order.status === 'confirmed' && (
                       <button
                         type="button"
-                        className="btn btn-primary btn-sm"
+                        className="btn btn-primary btn-sm flex-1 sm:flex-none"
                         disabled={action.busy !== null}
                         onClick={() => void act(order, 'prepare')}
                       >
@@ -234,7 +385,7 @@ export default function OrdersTab({ orders, sellerVat, isAdmin, reload }: OpsPro
                       </button>
                     )}
                     {order.delivery && (
-                      <Link to="/admin/deliveries" className="btn btn-dark btn-sm">
+                      <Link to="/admin/deliveries" className="btn btn-dark btn-sm flex-1 sm:flex-none">
                         <Truck className="h-4 w-4" aria-hidden="true" />
                         {isAdmin ? t("Manage delivery") : t("Open delivery")}
                       </Link>
@@ -242,8 +393,11 @@ export default function OrdersTab({ orders, sellerVat, isAdmin, reload }: OpsPro
                   </div>
 
                   {expanded && (
-                    <div className="fade-up mt-6 space-y-5 border-t border-line pt-6">
+                    <div className="fade-up mt-6 space-y-4 border-t border-line pt-6 sm:space-y-5">
                       <OrderItemsTable order={order} />
+                      {isAdmin && order.status === 'pending' && (
+                        <PriceEditor order={order} reload={reload} />
+                      )}
                       <OrderSummary order={order} className="sm:ms-auto sm:max-w-md" />
                     </div>
                   )}

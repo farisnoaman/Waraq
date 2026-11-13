@@ -261,7 +261,7 @@ function OrderCard({ order, queuedConfirmation, online, onConfirm, onBill, onRec
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex flex-wrap items-center gap-2.5">
-            <h3 className="font-display text-2xl tracking-wide">{order.reference}</h3>
+            <h3 className="font-display text-xl tracking-wide sm:text-2xl">{order.reference}</h3>
             <Badge tone={ORDER_STATUS_TONE[order.status]}>{t(ORDER_STATUS_LABEL[order.status])}</Badge>
             {order.buyer_confirmed_at && (
               <Badge tone="mint">
@@ -281,9 +281,17 @@ function OrderCard({ order, queuedConfirmation, online, onConfirm, onBill, onRec
             {order.items.length === 1 ? t("item") : t("items")} · {order.city}
           </p>
         </div>
-        <div className="text-start sm:text-end">
-          <p className="text-xs uppercase tracking-wider text-muted">{t("Final payable (incl. VAT)")}</p>
-          <p className="font-display text-2xl font-semibold text-primary-strong">{sar(order.total)}</p>
+        <div className="w-full rounded-xl border border-line bg-card px-4 py-3 text-start sm:w-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:text-end">
+          <p className="text-[10px] uppercase tracking-wider text-muted sm:text-xs">
+            {t("Final payable (incl. VAT)")}
+          </p>
+          <p className="font-display text-xl font-semibold text-primary-strong sm:text-2xl">
+            {sar(order.total)}
+          </p>
+          <p className="text-xs text-muted sm:text-sm">
+            {order.items.length} {order.items.length === 1 ? t("item") : t("items")} ·{' '}
+            {order.total_units}{' '}{t("units")}
+          </p>
         </div>
       </div>
 
@@ -310,7 +318,7 @@ function OrderCard({ order, queuedConfirmation, online, onConfirm, onBill, onRec
       <div className="mt-5 flex flex-wrap items-center gap-2.5">
         <button
           type="button"
-          className="btn btn-outline btn-sm"
+          className="btn btn-outline btn-sm w-full sm:w-auto"
           aria-expanded={open}
           onClick={() => setOpen((current) => !current)}
         >
@@ -320,14 +328,18 @@ function OrderCard({ order, queuedConfirmation, online, onConfirm, onBill, onRec
           />
           {open ? t("Hide details") : t("View items and bill")}
         </button>
-        <button type="button" className="btn btn-outline btn-sm" onClick={() => onBill(order)}>
+        <button
+          type="button"
+          className="btn btn-outline btn-sm flex-1 sm:flex-none"
+          onClick={() => onBill(order)}
+        >
           <Printer className="h-4 w-4" aria-hidden="true" />
           {t("Order bill")}
         </button>
         {canConfirm && (
           <button
             type="button"
-            className="btn btn-primary btn-sm"
+            className="btn btn-primary btn-sm flex-1 sm:flex-none"
             onClick={() => void confirm()}
             disabled={confirming}
           >

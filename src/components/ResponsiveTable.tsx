@@ -66,8 +66,8 @@ export default function ResponsiveTable<T>({
     : 'rt-table hidden lg:block overflow-x-auto rounded-2xl border border-line bg-card';
   const list = nested ? 'rt-cards space-y-2.5 lg:hidden' : 'rt-cards space-y-3 lg:hidden';
   const cardShell = nested
-    ? 'rounded-xl border border-line bg-white p-4'
-    : 'rounded-2xl border border-line bg-card p-4 sm:p-5';
+    ? 'overflow-hidden rounded-xl border border-line bg-white'
+    : 'overflow-hidden rounded-2xl border border-line bg-card';
 
   const chevron = (expanded: boolean) => (
     <ChevronDown
@@ -150,7 +150,7 @@ export default function ResponsiveTable<T>({
           const body = columns.filter((col) => !col.primary && !col.hideOnMobile);
           return (
             <li key={getRowKey(row)} className={cardShell}>
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 px-4 pt-4">
                 {canExpand && onToggle && (
                   <button
                     type="button"
@@ -172,11 +172,11 @@ export default function ResponsiveTable<T>({
               </div>
 
               {body.length > 0 && (
-                <dl className="mt-3 space-y-1.5">
+                <dl className="mt-3 divide-y divide-dotted divide-line/80 px-4 pb-1 text-sm">
                   {body.map((col) => (
                     <div
                       key={col.label}
-                      className="flex items-baseline justify-between gap-4 text-sm"
+                      className="flex items-baseline justify-between gap-4 py-1.5"
                     >
                       <dt className="shrink-0 text-muted">{col.label}</dt>
                       <dd
@@ -190,11 +190,13 @@ export default function ResponsiveTable<T>({
               )}
 
               {expanded && expandedContent && (
-                <div className="mt-4 border-t border-line pt-4">{expandedContent(row)}</div>
+                <div className="mt-3 border-t border-line bg-paper-deep/30 px-4 py-4">
+                  {expandedContent(row)}
+                </div>
               )}
 
               {actions && (
-                <div className="mt-4 flex flex-wrap items-center gap-2.5 border-t border-line pt-3">
+                <div className="mt-3 flex flex-wrap items-center gap-2.5 border-t border-line bg-paper-deep/40 px-4 py-3">
                   {actions(row)}
                 </div>
               )}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FolderPlus, LayoutGrid, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import {
@@ -13,6 +13,7 @@ import {
 } from '../../components/ui';
 import { api, ApiError, errorMessage, invalidate, useApi } from '../../lib/api';
 import ResponsiveTable from '../../components/ResponsiveTable';
+import ProductImagePicker from '../../components/ProductImagePicker';
 import { percent, sar } from '../../lib/format';
 import type { Category, Product, Spec } from '../../lib/types';
 import { schemas, validate, type FieldErrors } from '../../lib/validation';
@@ -55,6 +56,11 @@ interface ProductForm {
   moq: string;
   unit_price: string;
   vat_rate: string;
+  units_per_carton: string;
+  carton_price: string;
+  cost_price: string;
+  min_sell_price: string;
+  price_effective_from: string;
   in_stock: boolean;
   featured: boolean;
   image: string;
@@ -83,6 +89,11 @@ const blankProduct = (categoryId = ''): ProductForm => ({
   moq: '1',
   unit_price: '',
   vat_rate: '',
+  units_per_carton: '',
+  carton_price: '',
+  cost_price: '',
+  min_sell_price: '',
+  price_effective_from: '',
   in_stock: true,
   featured: false,
   image: IMAGE_PRESETS[0].url,
@@ -98,6 +109,13 @@ const blankCategory = (kind: 'product' | 'project'): CategoryForm => ({
   sort_order: '10',
 });
 
+const padLocal = (n: number) => String(n).padStart(2, '0');
+/** ISO string -> the local value a `datetime-local` input expects. */
+const toLocalInput = (iso: string) => {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${padLocal(d.getMonth() + 1)}-${padLocal(d.getDate())}T${padLocal(d.getHours())}:${padLocal(d.getMinutes())}`;
+};
+
 function toForm(product: Product): ProductForm {
   return {
     id: product.id,
@@ -112,6 +130,13 @@ function toForm(product: Product): ProductForm {
     moq: String(product.moq),
     unit_price: String(product.unit_price),
     vat_rate: product.vat_rate_override == null ? '' : String(product.vat_rate_override),
+    units_per_carton: product.units_per_carton == null ? '' : String(product.units_per_carton),
+    carton_price: product.carton_price == null ? '' : String(product.carton_price),
+    cost_price: product.cost_price == null ? '' : String(product.cost_price),
+    min_sell_price: product.min_sell_price == null ? '' : String(product.min_sell_price),
+    price_effective_from: product.price_effective_from
+      ? toLocalInput(product.price_effective_from)
+      : '',
     in_stock: product.in_stock,
     featured: product.featured,
     image: product.image,
@@ -120,7 +145,21 @@ function toForm(product: Product): ProductForm {
 }
 
 export default function CatalogTab() {
-  const products = useApi<Product[]>('/api/products');
+  // Fetched with the admin token so the catalogue grid can show cost_price;
+  // the public useApi cache strips it.
+  const [products, setProducts] = useState<Product[] | null>(null);
+  const [productsError, setProductsError] = useState<string | null>(null);
+  const reloadProducts = useCallback(async () => {
+    try {
+      setProducts(await api<Product[]>('/api/products'));
+      setProductsError(null);
+    } catch (err) {
+      setProductsError(errorMessage(err));
+    }
+  }, []);
+  useEffect(() => {
+    void reloadProducts();
+  }, [reloadProducts]);
   const categories = useApi<Category[]>('/api/categories');
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState('');
@@ -144,15 +183,15 @@ export default function CatalogTab() {
   // Deep link from a product page: /admin/catalog?edit=12
   const editId = params.get('edit');
   useEffect(() => {
-    if (!editId || !products.data) return;
-    const target = products.data.find((p) => String(p.id) === editId);
+    if (!editId || !products) return;
+    const target = products.find((p) => String(p.id) === editId);
     if (target) {
       setProductForm(toForm(target));
       setCategoryForm(null);
       setErrors({});
     }
     setParams({}, { replace: true });
-  }, [editId, products.data, setParams]);
+  }, [editId, products, setParams]);
 
   useEffect(() => {
     if (productForm || categoryForm) {
@@ -161,7 +200,7 @@ export default function CatalogTab() {
   }, [productForm?.id, categoryForm?.id, Boolean(productForm), Boolean(categoryForm)]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const needle = query.trim().toLowerCase();
-  const visible = (products.data ?? []).filter(
+  const visible = (products ?? []).filter(
     (product) =>
       !needle ||
       [
@@ -217,6 +256,7 @@ export default function CatalogTab() {
         body: productForm.id ? { ...result.data, id: productForm.id } : result.data,
       });
       invalidate('/api/products');
+      void reloadProducts();
       setNotice(t("{0} has been {1}.", [result.data.name, productForm.id ? t("updated") : t("added to the catalogue")]));
       setProductForm(null);
     } catch (err) {
@@ -265,6 +305,7 @@ export default function CatalogTab() {
       await api(`/api/${kind}`, { method: 'DELETE', body: { id } });
       invalidate('/api/products');
       invalidate('/api/categories');
+      void reloadProducts();
       setNotice(t("{0} has been deleted.", [name]));
     } catch (err) {
       setFailure(errorMessage(err));
@@ -282,8 +323,8 @@ export default function CatalogTab() {
     setErrors((current) => ({ ...current, [key]: '' }));
   };
 
-  const loading = products.loading || categories.loading;
-  const loadError = products.error || categories.error;
+  const loading = products === null || categories.loading;
+  const loadError = productsError || categories.error;
 
   return (
     <div>
@@ -456,6 +497,51 @@ export default function CatalogTab() {
                 error={errors.vat_rate}
                 hint={t("Leave empty to use the default VAT.")}
               />
+              <TextField
+                id="pf-cost"
+                label={t("Cost price (SAR) — internal")}
+                inputMode="decimal"
+                value={productForm.cost_price}
+                onChange={(e) => setP('cost_price', e.target.value.replace(/[^\d.]/g, '').slice(0, 10))}
+                error={errors.cost_price}
+                hint={t("Only administrators can see this.")}
+              />
+              <TextField
+                id="pf-minsell"
+                label={t("Minimum sell price (SAR)")}
+                inputMode="decimal"
+                value={productForm.min_sell_price}
+                onChange={(e) => setP('min_sell_price', e.target.value.replace(/[^\d.]/g, '').slice(0, 10))}
+                error={errors.min_sell_price}
+                hint={t("The floor when negotiating a price on an order.")}
+              />
+              <TextField
+                id="pf-carton-price"
+                label={t("Carton price excl. VAT (SAR)")}
+                inputMode="decimal"
+                value={productForm.carton_price}
+                onChange={(e) => setP('carton_price', e.target.value.replace(/[^\d.]/g, '').slice(0, 10))}
+                error={errors.carton_price}
+                hint={t("Lets buyers order by the carton.")}
+              />
+              <TextField
+                id="pf-units-carton"
+                label={t("Units per carton")}
+                inputMode="numeric"
+                value={productForm.units_per_carton}
+                onChange={(e) => setP('units_per_carton', e.target.value.replace(/\D/g, '').slice(0, 4))}
+                error={errors.units_per_carton}
+                hint={t("Carton price needs this.")}
+              />
+              <TextField
+                id="pf-effective"
+                label={t("Prices effective from")}
+                type="datetime-local"
+                value={productForm.price_effective_from}
+                onChange={(e) => setP('price_effective_from', e.target.value)}
+                error={errors.price_effective_from}
+                hint={t("Shown on the catalogue when prices change.")}
+              />
               <div className="sm:col-span-2 lg:col-span-3">
                 <TextField
                   id="pf-summary"
@@ -476,6 +562,15 @@ export default function CatalogTab() {
                   value={productForm.description}
                   onChange={(e) => setP('description', e.target.value)}
                   error={errors.description}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <ProductImagePicker
+                  label={t("Photo")}
+                  value={productForm.image}
+                  onChange={(url) => setP('image', url)}
+                  hint={t("Upload a picture, or use an address below. JPEG, PNG, WebP or AVIF, up to 2 MB.")}
+                  error={errors.image}
                 />
               </div>
               <div className="sm:col-span-2">
@@ -689,7 +784,7 @@ export default function CatalogTab() {
           <ErrorPanel
             message={loadError}
             onRetry={() => {
-              products.reload();
+              void reloadProducts();
               categories.reload();
             }}
           />
@@ -751,11 +846,31 @@ export default function CatalogTab() {
                     render: (product) => (
                       <>
                         <p className="font-semibold">{sar(product.unit_price)}</p>
+                        {product.carton_price != null && (
+                          <p className="text-xs text-muted">
+                            {t("Carton:")}{' '}{sar(product.carton_price)} / {product.units_per_carton}
+                          </p>
+                        )}
+                        {product.min_sell_price != null && (
+                          <p className="text-xs text-muted">
+                            {t("Min:")}{' '}{sar(product.min_sell_price)}
+                          </p>
+                        )}
                         <p className="text-xs text-muted">
                           + {percent(product.vat_rate)}{' '}{t("VAT (")}{sar(product.vat_value)})
                         </p>
                       </>
                     ),
+                  },
+                  {
+                    label: t("Cost"),
+                    num: true,
+                    render: (product) =>
+                      product.cost_price != null ? (
+                        <span className="font-semibold tabular-nums">{sar(product.cost_price)}</span>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      ),
                   },
                   {
                     label: t("MOQ"),
@@ -810,7 +925,7 @@ export default function CatalogTab() {
             </h3>
             <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {allCategories.map((category) => {
-                const used = (products.data ?? []).filter(
+                const used = (products ?? []).filter(
                   (p) => p.category_id === category.id || p.project_category_id === category.id,
                 ).length;
                 return (

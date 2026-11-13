@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Percent, Plus, Save, ShieldCheck, Trash2 } from 'lucide-react';
 import { Alert, ErrorPanel, Spinner, TextField } from '../../components/ui';
+import ProductImagePicker from '../../components/ProductImagePicker';
 import { api, ApiError, errorMessage, invalidate, useApi } from '../../lib/api';
 import { percent, round2, sar } from '../../lib/format';
 import type { Product, Settings } from '../../lib/types';
@@ -123,11 +124,9 @@ function ProductVatRow({ product, defaultVat }: { product: Product; defaultVat: 
 function ProductVatCard({ product, defaultVat }: { product: Product; defaultVat: number }) {
   const v = useProductVat(product, defaultVat);
   return (
-    <li className="rounded-2xl border border-line bg-card p-4">
+    <li className="overflow-hidden rounded-2xl border border-line bg-card p-4">
       <p className="font-semibold">{t(product.name)}</p>
-      <p className="mt-0.5 text-xs text-muted">
-        {product.sku}{' '}{t("· MOQ")}{' '}{product.moq}
-      </p>
+      <p className="mt-0.5 font-mono text-[11px] text-muted">{product.sku}</p>
       <div className="mt-3 grid grid-cols-2 gap-3">
         <div>
           <label
@@ -161,17 +160,17 @@ function ProductVatCard({ product, defaultVat }: { product: Product; defaultVat:
           />
         </div>
       </div>
-      <dl className="mt-3 space-y-1.5 text-sm">
-        <div className="flex items-baseline justify-between gap-4">
+      <dl className="mt-3 divide-y divide-dotted divide-line/80 text-sm">
+        <div className="flex items-baseline justify-between gap-4 py-1.5">
           <dt className="text-muted">{t("VAT value / item")}</dt>
           <dd className="tabular-nums">{sar(v.vatValue)}</dd>
         </div>
-        <div className="flex items-baseline justify-between gap-4">
+        <div className="flex items-baseline justify-between gap-4 py-1.5">
           <dt className="text-muted">{t("Price incl. VAT")}</dt>
           <dd className="font-semibold tabular-nums">{sar(round2(v.numericPrice + v.vatValue))}</dd>
         </div>
       </dl>
-      <div className="mt-3 flex items-center gap-2 border-t border-line pt-3">
+      <div className="-mx-4 -mb-4 mt-3 flex items-center gap-2 border-t border-line bg-paper-deep/40 px-4 py-2.5">
         <button
           type="button"
           className="btn btn-outline btn-sm"
@@ -194,9 +193,87 @@ function ProductVatCard({ product, defaultVat }: { product: Product; defaultVat:
   );
 }
 
+/**
+ * One product's photo, with the uploader hidden until it is asked for. The
+ * picture is uploaded first and the address is saved on the product right
+ * after, so a failed upload never leaves the product pointing at nothing.
+ */
+function ProductPhotoCard({ product }: { product: Product }) {
+  const [open, setOpen] = useState(false);
+  const [image, setImage] = useState(product.image);
+  const [shownProductImage, setShownProductImage] = useState(product.image);
+  const [saving, setSaving] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+
+  // The list is refetched after every save, so the card follows the product
+  // it shows instead of keeping a photo of its own.
+  if (shownProductImage !== product.image) {
+    setShownProductImage(product.image);
+    setImage(product.image);
+  }
+
+  const save = async (url: string) => {
+    setSaving(true);
+    setFailure(null);
+    try {
+      await api('/api/products', { method: 'PUT', body: { id: product.id, mode: 'image', image: url } });
+      setImage(url);
+      invalidate('/api/products');
+    } catch (err) {
+      setFailure(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <li className="rounded-2xl border border-line bg-card p-4">
+      <div className="flex items-center gap-3">
+        <img
+          src={image}
+          alt=""
+          loading="lazy"
+          className="h-16 w-16 shrink-0 rounded-xl border border-line object-cover"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-semibold">{t(product.name)}</p>
+          <p className="text-xs text-muted">{product.sku}</p>
+        </div>
+      </div>
+
+      {open && (
+        <div className="mt-4 border-t border-line pt-4">
+          <ProductImagePicker
+            value={image}
+            onChange={(url) => void save(url)}
+            hint={t("JPEG, PNG, WebP or AVIF, up to 2 MB.")}
+          />
+          {saving && (
+            <p role="status" className="mt-2 text-sm text-muted">
+              {t("Saving…")}
+            </p>
+          )}
+          {failure && (
+            <p role="alert" className="mt-2 text-sm font-medium text-danger">
+              {failure}
+            </p>
+          )}
+        </div>
+      )}
+
+      <button
+        type="button"
+        className="btn btn-outline btn-sm mt-3"
+        onClick={() => setOpen((current) => !current)}
+      >
+        {open ? t('Close') : t('Change photo')}
+      </button>
+    </li>
+  );
+}
+
 export default function SettingsTab() {
-  const products = useApi<Product[]>('/api/products');
-  const [settings, setSettings] = useState<Settings | null>(null);
+  const products = useApi<Product[]>('/api/products');  const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -409,6 +486,30 @@ export default function SettingsTab() {
                 ))}
               </ul>
             </>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-2xl">{t("Product photos")}</h3>
+        <p className="mt-1 max-w-3xl text-sm text-muted">
+          {t("Upload the picture of each product. It replaces the photo on the catalogue page and on the product page straight away.")}
+        </p>
+        <div className="mt-4">
+          {products.error ? (
+            <ErrorPanel message={products.error} onRetry={products.reload} />
+          ) : products.loading ? (
+            <div className="skeleton h-64 rounded-2xl" role="status" aria-label={t("Loading products")} />
+          ) : (products.data ?? []).length === 0 ? (
+            <p className="rounded-2xl border border-line bg-card p-6 text-muted">
+              {t("There are no products yet.")}
+            </p>
+          ) : (
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {(products.data ?? []).map((product) => (
+                <ProductPhotoCard key={product.id} product={product} />
+              ))}
+            </ul>
           )}
         </div>
       </div>
