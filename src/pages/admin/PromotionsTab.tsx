@@ -99,7 +99,7 @@ export default function PromotionsTab(_props: OpsProps) {
 
   const openCreate = () => {
     setNotice(null);
-    setForm({ ...EMPTY_FORM });
+    setForm({ ...EMPTY_FORM, id: null });
     setErrors({});
   };
 

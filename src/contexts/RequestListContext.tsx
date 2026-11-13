@@ -49,12 +49,15 @@ function readStored(): RequestLine[] {
     const parsed: unknown = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .map((line) => ({
-        productId: Number((line as RequestLine).productId),
-        qty: Number((line as RequestLine).qty),
+      .map((line): RequestLine => {
         // Carts saved before carton pricing existed default to units.
-        unitType: (line as RequestLine).unitType === 'carton' ? 'carton' : 'unit',
-      }))
+        const unitType: UnitType = (line as RequestLine).unitType === 'carton' ? 'carton' : 'unit';
+        return {
+          productId: Number((line as RequestLine).productId),
+          qty: Number((line as RequestLine).qty),
+          unitType,
+        };
+      })
       .filter(
         (line) =>
           Number.isInteger(line.productId) &&
