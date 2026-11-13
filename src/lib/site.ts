@@ -2,6 +2,9 @@ import { getLang, t, type Lang } from './i18n';
 
 export const SITE_NAME = 'Waraq Pro';
 export const SITE_DOMAIN = 'waraq.pro';
+/** Pretty display form for the footer and contact blocks. */
+export const SITE_WWW = `www.${SITE_DOMAIN}`;
+export const SITE_URL = `https://${SITE_DOMAIN}`;
 export const SITE_EMAIL = 'info@warq.pro';
 // Wrapped in left-to-right isolate marks so the leading + stays in front inside Arabic text.
 export const PHONE_DISPLAY = '⁦+966533014118⁩';
