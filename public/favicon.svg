@@ -1,5 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-  <rect width="48" height="48" rx="14" fill="#123D35"/>
-  <path d="M17.5 28.5 C15.2 23.2 18.2 18.2 24.2 17.5 C27.2 17.1 29.8 16.1 31.8 14.5 C34.2 20.8 33.4 27.6 28.2 30.8 C24.2 33.2 19.6 32.2 17.5 28.5 Z" fill="none" stroke="#D8F26A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M14.5 34.5 C15.2 29.8 18.8 26.8 24.5 24.2" fill="none" stroke="#D8F26A" stroke-width="2.6" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Waraq Pro">
+  <title>Waraq Pro</title>
+  <!-- 48-unit tile scaled ×10.6667 → 512×512 (rx 149.33) -->
+  <g transform="scale(10.6667)">
+    <rect width="48" height="48" rx="14" fill="#123D35"/>
+    <path d="M17.5 28.5 C15.2 23.2 18.2 18.2 24.2 17.5 C27.2 17.1 29.8 16.1 31.8 14.5 C34.2 20.8 33.4 27.6 28.2 30.8 C24.2 33.2 19.6 32.2 17.5 28.5 Z"
+          fill="none" stroke="#D8F26A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M14.5 34.5 C15.2 29.8 18.8 26.8 24.5 24.2"
+          fill="none" stroke="#D8F26A" stroke-width="2.6" stroke-linecap="round"/>
+  </g>
 </svg>
