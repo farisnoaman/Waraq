@@ -610,7 +610,8 @@
 /* Printing a bill or receipt: only the document sheet reaches the paper. */
 @media print {
   @page {
-    margin: 12mm;
+    size: A4 portrait;
+    margin: 10mm;
   }
 
   html.doc-open #root {
@@ -652,6 +653,43 @@
 
   .rt-table {
     display: block !important;
+  }
+
+  /* The items table must fit A4: drop the screen min-width and the scroll
+     wrapper, allow the item cell to wrap, and keep every column on the page. */
+  .doc-sheet .overflow-x-auto,
+  .doc-sheet .rt-table {
+    overflow: visible !important;
+  }
+
+  .doc-sheet table.data-table {
+    min-width: 0 !important;
+    width: 100% !important;
+    table-layout: fixed;
+    font-size: 10.5px;
+  }
+
+  .doc-sheet .data-table th,
+  .doc-sheet .data-table td {
+    white-space: normal;
+    padding: 5px 6px;
+    word-break: break-word;
+  }
+
+  /* Fixed column widths: the item column gets the largest share; numbers
+     never wrap mid-figure. */
+  .doc-sheet .data-table th:nth-child(1),
+  .doc-sheet .data-table td:nth-child(1) {
+    width: 27%;
+  }
+
+  .doc-sheet .data-table th.num,
+  .doc-sheet .data-table td.num {
+    white-space: nowrap;
+  }
+
+  .doc-sheet tr {
+    page-break-inside: avoid;
   }
 
   .data-table th {

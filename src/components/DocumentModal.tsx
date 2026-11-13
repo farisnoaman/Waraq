@@ -57,6 +57,27 @@ export default function DocumentModal({ order, installment, sellerVatNumber, onC
     };
   }, [onClose]);
 
+  // While the document is open, the tab title becomes the suggested file name
+  // for "Save as PDF": buyer - document number - weekday dd mmm yyyy.
+  useEffect(() => {
+    const previous = document.title;
+    const datePart = new Intl.DateTimeFormat('en-GB', {
+      weekday: 'long',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
+      .format(new Date(order.created_at))
+      .replace(/,/g, '');
+    const documentNumber = isReceipt
+      ? (installment?.receipt_number ?? order.reference)
+      : order.reference;
+    document.title = `${order.buyer_name} - ${documentNumber} - ${datePart}`;
+    return () => {
+      document.title = previous;
+    };
+  }, [order, isReceipt, installment]);
+
   const totalDue = Number(order.payment?.total_due ?? order.total);
   const balanceAfter = installment ? Number(installment.balance_after) : 0;
   const paidToDate = installment ? round2(totalDue - balanceAfter) : 0;
