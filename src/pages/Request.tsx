@@ -11,6 +11,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import DocumentModal from '../components/DocumentModal';
+import WhatsAppIcon from '../components/WhatsAppIcon';
 import { OrderItemsTable, OrderSummary } from '../components/OrderBreakdown';
 import QtyStepper from '../components/QtyStepper';
 import {
@@ -26,7 +27,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useRequestList } from '../contexts/RequestListContext';
 import { api, ApiError, errorMessage, useApi } from '../lib/api';
 import { percent, round2, sar } from '../lib/format';
-import { PHONE_DISPLAY } from '../lib/site';
+import { whatsappLink, PHONE_DISPLAY } from '../lib/site';
 import type { Order, Product } from '../lib/types';
 import { schemas, validate, type FieldErrors } from '../lib/validation';
 import { t } from '../lib/i18n';
@@ -151,6 +152,34 @@ export default function RequestPage() {
 
   if (placed) {
     const { order } = placed;
+
+    const orderMessage = () => {
+      const lines = order.items
+        .map(
+          (item) =>
+            `- ${item.product_name} (${item.sku}) — ${item.qty} × ${item.unit_price} = ${item.line_total} SAR`,
+        )
+        .join('\n');
+      return [
+        'Waraq Pro — order request',
+        `Order reference: ${order.reference}`,
+        `Buyer: ${order.buyer_name}${order.buyer_company ? ` — ${order.buyer_company}` : ''}`,
+        order.buyer_phone ? `Phone: ${order.buyer_phone}` : '',
+        `City: ${order.city}`,
+        order.address ? `Address: ${order.address}` : '',
+        '',
+        'Items:',
+        lines,
+        '',
+        `Subtotal: ${order.subtotal} SAR`,
+        `VAT: ${order.vat_total} SAR`,
+        `Total: ${order.total} SAR`,
+        order.notes ? `Notes: ${order.notes}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n');
+    };
+
     return (
       <>
         <PageHeader eyebrow={t("Order placed")} title={t("Your order has been received.")} />
@@ -193,7 +222,16 @@ export default function RequestPage() {
             <OrderSummary order={order} className="mt-5 sm:ms-auto sm:max-w-md" />
 
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/buyer" className="btn btn-primary">
+              <a
+                href={whatsappLink(orderMessage())}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary bg-[#25D366] text-forest hover:bg-[#20bd5a]"
+              >
+                <WhatsAppIcon className="h-4 w-4" />
+                {t("Send order to WhatsApp")}
+              </a>
+              <Link to="/buyer" className="btn btn-outline">
                 {t("Track order in buyer portal")}
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
@@ -201,6 +239,7 @@ export default function RequestPage() {
                 {t("Back to products")}
               </Link>
             </div>
+            <p className="mt-4 text-sm text-muted">{t("Send it to us on WhatsApp for the fastest response.")}</p>
           </div>
         </section>
         {showBill && (

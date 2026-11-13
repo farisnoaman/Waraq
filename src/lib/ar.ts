@@ -1086,5 +1086,7 @@ export const ar: Record<string, string> = {
   "{0} placed order {1} for {2} SAR.": "أنشأ {0} الطلب {1} بقيمة {2} ر.س.",
   "Order {0} has been confirmed by Waraq Pro and is being prepared.": "تم تأكيد الطلب {0} من ورق برو وجارٍ تجهيزه.",
   "Order {0} has been dispatched and is on its way to you.": "تم شحن الطلب {0} وهو في طريقه إليك.",
-  "You were assigned the delivery for order {0}.": "تم إسناد إليك توصيل الطلب {0}."
+  "You were assigned the delivery for order {0}.": "تم إسناد إليك توصيل الطلب {0}.",
+  "Send order to WhatsApp": "أرسل الطلب عبر واتساب",
+  "Send it to us on WhatsApp for the fastest response.": "أرسله إلينا عبر واتساب للحصول على أسرع رد."
 };
