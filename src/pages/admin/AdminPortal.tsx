@@ -8,6 +8,7 @@ import {
   LogOut,
   RefreshCw,
   Settings as SettingsIcon,
+  Tags,
   Truck,
   UserRound,
   Users,
@@ -29,6 +30,7 @@ import DeliveriesTab from './DeliveriesTab';
 import InboxTab from './InboxTab';
 import OrdersTab from './OrdersTab';
 import PaymentsTab from './PaymentsTab';
+import PromotionsTab from './PromotionsTab';
 import SettingsTab from './SettingsTab';
 import UsersTab from './UsersTab';
 import type { OpsProps } from './shared';
@@ -102,6 +104,7 @@ export default function AdminPortal() {
     { to: 'orders', label: 'Orders', icon: ClipboardList, count: orders.length },
     { to: 'deliveries', label: 'Deliveries', icon: Truck, count: withDelivery },
     { to: 'payments', label: 'Payments', icon: Wallet, count: withPayment },
+    { to: 'promotions', label: 'Promotions', icon: Tags, adminOnly: true },
     { to: 'commissions', label: 'Commissions', icon: BadgePercent },
     { to: 'users', label: 'Users & staff', icon: Users, adminOnly: true },
     { to: 'settings', label: 'Settings', icon: SettingsIcon, adminOnly: true },
@@ -205,6 +208,7 @@ export default function AdminPortal() {
             <Route path="orders" element={<OrdersTab {...ops} />} />
             <Route path="deliveries" element={<DeliveriesTab {...ops} />} />
             <Route path="payments" element={<PaymentsTab {...ops} />} />
+            <Route path="promotions" element={adminOnly(<PromotionsTab {...ops} />)} />
             <Route path="commissions" element={<CommissionsTab {...ops} />} />
             <Route path="users" element={adminOnly(<UsersTab me={profile} />)} />
             <Route path="settings" element={adminOnly(<SettingsTab />)} />

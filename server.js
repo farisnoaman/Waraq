@@ -28,7 +28,9 @@ if (typeof process.loadEnvFile === 'function' && fs.existsSync(ENV_FILE)) {
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
-const MAX_BODY_BYTES = 1024 * 1024;
+// A photo is sent as multipart/form-data, so the body limit leaves room for
+// one image plus its multipart envelope.
+const MAX_BODY_BYTES = 4 * 1024 * 1024;
 
 /**
  * Reads the role claim of a Supabase key. Legacy keys are JWTs; the newer
@@ -77,8 +79,10 @@ const API_ROUTES = new Set([
   'products',
   'orders',
   'operations',
+  'promotions',
   'google-session',
   'notifications',
+  'uploads',
 ]);
 
 // Security headers are defined once, in vercel.json, and reused here.
@@ -128,7 +132,7 @@ function readBody(req) {
       }
       chunks.push(chunk);
     });
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
     req.on('error', reject);
   });
 }
@@ -148,9 +152,9 @@ async function handleApi(req, res, url) {
   if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
     const raw = await readBody(req);
     const isJson = String(req.headers['content-type'] || '').includes('application/json');
-    if (raw && isJson) {
+    if (raw.length && isJson) {
       try {
-        req.body = JSON.parse(raw);
+        req.body = JSON.parse(raw.toString('utf8'));
       } catch {
         return sendJson(res, 400, { error: 'The request body is not valid JSON.' });
       }

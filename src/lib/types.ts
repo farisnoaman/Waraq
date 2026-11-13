@@ -47,6 +47,15 @@ export interface Product {
   vat_rate_override: number | null;
   vat_value: number;
   price_incl_vat: number;
+  /** Carton packaging: how many units one carton contains, and its price. */
+  units_per_carton: number | null;
+  carton_price: number | null;
+  /** The floor for negotiated prices (admin sees it; buyers may too). */
+  min_sell_price: number | null;
+  /** Internal cost — present only in admin responses, never buyer/staff. */
+  cost_price?: number | null;
+  /** Display metadata: when the current prices take effect. */
+  price_effective_from: string | null;
   in_stock: boolean;
   featured: boolean;
   image: string;
@@ -78,6 +87,8 @@ export type PaymentStatus = 'unpaid' | 'partial' | 'paid';
 export type PaymentMethod = 'bank_transfer' | 'mada' | 'cash' | 'cheque';
 export type CommissionStatus = 'unpaid' | 'awaiting_confirmation' | 'paid';
 
+export type UnitType = 'unit' | 'carton';
+
 export interface OrderItem {
   id: number;
   order_id: number;
@@ -87,6 +98,11 @@ export interface OrderItem {
   pack_unit: string;
   moq: number;
   qty: number;
+  unit_type: UnitType;
+  units_per_carton: number | null;
+  /** Catalogue price of the chosen unit type at purchase; the discount base. */
+  list_unit_price: number;
+  /** Charged price per unit_type — possibly negotiated below the list price. */
   unit_price: number;
   vat_rate: number;
   vat_per_item: number;
@@ -156,12 +172,39 @@ export interface Order {
   vat_total: number;
   total: number;
   total_units: number;
+  /** Σ list prices before any discount. */
+  list_total: number;
+  /** Item discounts + the promotion discount. */
+  discount_total: number;
+  promotion_id: number | null;
+  promotion_name: string | null;
+  promotion_discount: number;
   buyer_confirmed_at: string | null;
   created_at: string;
   updated_at: string;
   items: OrderItem[];
   delivery: Delivery | null;
   payment: Payment | null;
+}
+
+export type PromotionStatus = 'running' | 'scheduled' | 'expired' | 'inactive';
+export type DiscountType = 'percentage' | 'fixed';
+export type PromoThresholdType = 'order_total' | 'total_units' | 'total_cartons';
+
+export interface Promotion {
+  id: number;
+  name: string;
+  description: string | null;
+  discount_type: DiscountType;
+  discount_value: number;
+  threshold_type: PromoThresholdType;
+  threshold_value: number;
+  starts_at: string;
+  expires_at: string;
+  is_active: boolean;
+  status: PromotionStatus;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface OrdersResponse {

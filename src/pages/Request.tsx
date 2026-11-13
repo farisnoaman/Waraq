@@ -13,6 +13,7 @@ import {
 import DocumentModal from '../components/DocumentModal';
 import WhatsAppIcon from '../components/WhatsAppIcon';
 import { OrderItemsTable, OrderSummary } from '../components/OrderBreakdown';
+import { minQtyFor } from '../components/ProductCard';
 import QtyStepper from '../components/QtyStepper';
 import {
   Alert,
@@ -24,11 +25,11 @@ import {
   usePageTitle,
 } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
-import { useRequestList } from '../contexts/RequestListContext';
+import { lineKey, useRequestList } from '../contexts/RequestListContext';
 import { api, ApiError, errorMessage, useApi } from '../lib/api';
 import { percent, round2, sar } from '../lib/format';
 import { whatsappLink, PHONE_DISPLAY } from '../lib/site';
-import type { Order, Product } from '../lib/types';
+import type { Order, Product, UnitType } from '../lib/types';
 import { schemas, validate, type FieldErrors } from '../lib/validation';
 import { t } from '../lib/i18n';
 
@@ -78,20 +79,27 @@ export default function RequestPage() {
   }, [lines, products.data]);
 
   // Preview only: the server recalculates every figure from its own prices.
+  const linePrice = (product: Product, unitType: UnitType) =>
+    unitType === 'carton' ? product.carton_price ?? 0 : product.unit_price;
+  const unitsInLine = (product: Product, unitType: UnitType, qty: number) =>
+    unitType === 'carton' ? qty * (product.units_per_carton ?? 1) : qty;
+
   const totals = useMemo(() => {
     let subtotal = 0;
     let vat = 0;
     let units = 0;
     for (const { line, product } of rows) {
-      const lineSubtotal = round2(line.qty * product.unit_price);
+      const lineSubtotal = round2(line.qty * linePrice(product, line.unitType));
       subtotal = round2(subtotal + lineSubtotal);
       vat = round2(vat + round2((lineSubtotal * product.vat_rate) / 100));
-      units += line.qty;
+      units += unitsInLine(product, line.unitType, line.qty);
     }
     return { subtotal, vat, units, total: round2(subtotal + vat) };
   }, [rows]);
 
-  const belowMoq = rows.filter(({ line, product }) => line.qty < product.moq);
+  const belowMoq = rows.filter(
+    ({ line, product }) => unitsInLine(product, line.unitType, line.qty) < product.moq,
+  );
 
   const set =
     (key: keyof typeof values) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -132,7 +140,11 @@ export default function RequestPage() {
         method: 'POST',
         body: {
           ...result.data,
-          items: rows.map(({ line, product }) => ({ product_id: product.id, qty: line.qty })),
+          items: rows.map(({ line, product }) => ({
+            product_id: product.id,
+            qty: line.qty,
+            unit_type: line.unitType,
+          })),
         },
       });
       setPlaced(response);
@@ -313,11 +325,13 @@ export default function RequestPage() {
               <>
                 <ul className="space-y-3">
                   {rows.map(({ line, product }) => {
-                    const lineSubtotal = round2(line.qty * product.unit_price);
+                    const byCarton = line.unitType === 'carton';
+                    const unitPrice = linePrice(product, line.unitType);
+                    const lineSubtotal = round2(line.qty * unitPrice);
                     const lineVat = round2((lineSubtotal * product.vat_rate) / 100);
                     return (
                       <li
-                        key={product.id}
+                        key={lineKey(product.id, line.unitType)}
                         className="flex flex-col gap-3 rounded-2xl border border-line bg-card p-3 sm:p-4"
                       >
                         <div className="flex gap-4">
@@ -331,30 +345,41 @@ export default function RequestPage() {
                           </Link>
                           <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div className="min-w-0">
-                              <Link
-                                to={`/products/${product.slug}`}
-                                className="font-display text-xl leading-snug hover:text-primary-strong"
-                              >
-                                {t(product.name)}
-                              </Link>
+                              <p className="flex flex-wrap items-center gap-2">
+                                <Link
+                                  to={`/products/${product.slug}`}
+                                  className="font-display text-xl leading-snug hover:text-primary-strong"
+                                >
+                                  {t(product.name)}
+                                </Link>
+                                <span
+                                  className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                                    byCarton ? 'bg-brass/20 text-brass-deep' : 'bg-mint text-primary-strong'
+                                  }`}
+                                >
+                                  {byCarton ? t("Carton") : t("Unit")}
+                                </span>
+                              </p>
                               <p className="mt-0.5 text-sm text-muted">
-                                {t(product.pack_unit)}{' '}{t("· MOQ")}{' '}{product.moq}
+                                {t(product.pack_unit)}{' '}{t("· MOQ")}{' '}
+                                {minQtyFor(product, line.unitType)}{' '}
+                                {byCarton ? t("cartons") : t("units")}
                               </p>
                               <p className="mt-1 text-xs text-muted">
-                                {t("Unit:")}{' '}{sar(product.unit_price)}{' '}{t("+ VAT")}{' '}{percent(product.vat_rate)} (
-                                {sar(product.vat_value)}{' '}{t("per item)")}
+                                {byCarton ? t("Carton price") : t("Unit price:")}{' '}
+                                {sar(unitPrice)}{' '}{t("+ VAT")}{' '}{percent(product.vat_rate)}
                               </p>
                             </div>
                             <div className="flex items-center gap-1">
                               <QtyStepper
                                 value={line.qty}
-                                min={product.moq}
-                                onChange={(next) => setQty(product.id, next)}
-                                label={t(product.name)}
+                                min={minQtyFor(product, line.unitType)}
+                                onChange={(next) => setQty(product.id, line.unitType, next)}
+                                label={`${t(product.name)} (${byCarton ? t("Carton") : t("Unit")})`}
                               />
                               <button
                                 type="button"
-                                onClick={() => remove(product.id)}
+                                onClick={() => remove(product.id, line.unitType)}
                                 aria-label={t("Remove {0} from request list", [product.name])}
                                 className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-paper-deep hover:text-danger"
                               >
@@ -363,7 +388,7 @@ export default function RequestPage() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-2 text-xs">
+                        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-paper-deep/50 px-3 py-2 text-xs">
                           <span className="text-muted">
                             {t("Subtotal")}{' '}{sar(lineSubtotal)}{' '}{t("· VAT (")}{percent(product.vat_rate)}){' '}
                             {sar(lineVat)}
@@ -372,9 +397,11 @@ export default function RequestPage() {
                             {t("Item total incl. VAT:")}{' '}{sar(lineSubtotal + lineVat)}
                           </span>
                         </div>
-                        {line.qty < product.moq && (
+                        {unitsInLine(product, line.unitType, line.qty) < product.moq && (
                           <p className="text-sm font-medium text-danger">
-                            {t("The minimum order quantity for this product is")}{' '}{product.moq}.
+                            {t("The minimum order quantity for this product is")}{' '}
+                            {minQtyFor(product, line.unitType)}{' '}
+                            {byCarton ? t("cartons") : t("units")}.
                           </p>
                         )}
                       </li>

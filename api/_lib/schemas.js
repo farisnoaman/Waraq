@@ -19,6 +19,9 @@ export const DELIVERY_STATUSES = ['draft', 'assigned', 'dispatched', 'delivered'
 export const PAYMENT_METHODS = ['bank_transfer', 'mada', 'cash', 'cheque'];
 export const CONTACT_SUBJECTS = ['General enquiry', 'Product enquiry', 'Quotation', 'Delivery'];
 export const MAX_QTY = 9999;
+export const UNIT_TYPES = ['unit', 'carton'];
+export const DISCOUNT_TYPES = ['percentage', 'fixed'];
+export const PROMO_THRESHOLDS = ['order_total', 'total_units', 'total_cartons'];
 
 // eslint-disable-next-line no-control-regex
 const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
@@ -90,6 +93,17 @@ const password = z
   .min(8, 'Use at least 8 characters.')
   .max(72, 'Use 72 characters or fewer.');
 
+const nullableDecimal = (min, max, message) =>
+  z.preprocess((v) => (v === '' || v == null ? null : v), decimalRange(min, max, message).nullable());
+
+const nullableDatetime = z.preprocess(
+  (v) => (v === '' || v == null ? null : v),
+  z
+    .string()
+    .refine((v) => !Number.isNaN(Date.parse(v)), 'Enter a valid date and time.')
+    .nullable(),
+);
+
 const orderDetails = z.object({
   name: text(120, 2, 'Please enter your full name.'),
   company: text(160),
@@ -121,6 +135,17 @@ const productBase = {
     (v) => (v === '' || v == null ? null : v),
     decimalRange(0, 100, 'Enter a VAT percentage between 0 and 100.').nullable(),
   ),
+  // Carton packaging: a carton price requires the number of units it contains.
+  units_per_carton: z.preprocess(
+    (v) => (v === '' || v == null ? null : v),
+    intRange(1, 1000, 'Enter a whole number between 1 and 1000.').nullable(),
+  ),
+  carton_price: nullableDecimal(0.01, 1000000, 'Enter a price greater than 0.'),
+  // Price list: internal cost (never leaves the admin), the negotiation floor,
+  // and when the current prices take effect (display metadata).
+  cost_price: nullableDecimal(0, 1000000, 'Enter a valid cost price.'),
+  min_sell_price: nullableDecimal(0, 1000000, 'Enter a valid minimum price.'),
+  price_effective_from: nullableDatetime,
   in_stock: z.boolean('Choose yes or no.'),
   featured: z.boolean('Choose yes or no.'),
   image: imagePath,
@@ -163,6 +188,7 @@ export const schemas = {
         z.object({
           product_id: id,
           qty: intRange(1, MAX_QTY, `Quantities must be between 1 and ${MAX_QTY}.`),
+          unit_type: z.enum(UNIT_TYPES).default('unit'),
         }),
       )
       .min(1, 'Add at least one product to your request list.')
@@ -178,13 +204,50 @@ export const schemas = {
     message: text(2000, 10, 'Please write a message of at least 10 characters.'),
   }),
 
-  product: z.object(productBase),
+  product: z
+    .object(productBase)
+    .refine((v) => v.carton_price == null || v.units_per_carton != null, {
+      message: 'A carton price needs the number of units per carton.',
+      path: ['carton_price'],
+    }),
 
   productPricing: z.object({
     id,
     unit_price: productBase.unit_price,
     vat_rate: productBase.vat_rate,
   }),
+
+  // Admin adjusts a pending order line: never below the product's minimum
+  // sell price, never above the list price (the gap becomes the bill discount).
+  itemPrice: z.object({
+    id,
+    item_id: id,
+    unit_price: decimalRange(0.01, 1000000, 'Enter a price greater than 0.'),
+  }),
+
+  promotion: z
+    .object({
+      name: text(120, 2, 'Give the promotion a name.'),
+      description: text(300),
+      discount_type: z.enum(DISCOUNT_TYPES, 'Choose a discount type.'),
+      discount_value: decimalRange(0.01, 100000, 'Enter a discount value greater than 0.'),
+      threshold_type: z.enum(PROMO_THRESHOLDS, 'Choose a threshold type.'),
+      threshold_value: decimalRange(0.01, 1000000, 'Enter the threshold the order must reach.'),
+      starts_at: nullableDatetime,
+      expires_at: nullableDatetime,
+      is_active: z.boolean().optional(),
+    })
+    .refine((v) => v.starts_at != null, { message: 'Enter the start date and time.', path: ['starts_at'] })
+    .refine((v) => v.expires_at != null, {
+      message: 'Enter the expiry date and time.',
+      path: ['expires_at'],
+    })
+    .refine((v) => new Date(v.expires_at ?? 0) > new Date(v.starts_at ?? 1), {
+      message: 'The expiry must be after the start.',
+      path: ['expires_at'],
+    }),
+
+  imageAddress: imagePath,
 
   category: z.object({
     name: text(80, 2, 'Enter the category name.'),

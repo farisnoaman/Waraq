@@ -59,15 +59,19 @@ export default createHandler({
     const auth = await getAuth(req);
     const input = schemas.orderCreate.parse(readBody(req));
 
-    const qtyByProduct = new Map();
+    // Group by product + unit type: the same product can be ordered both by
+    // unit and by carton in one request, as separate lines.
+    const qtyByKey = new Map();
     for (const line of input.items) {
-      qtyByProduct.set(line.product_id, (qtyByProduct.get(line.product_id) ?? 0) + line.qty);
+      const key = `${line.product_id}:${line.unit_type}`;
+      qtyByKey.set(key, (qtyByKey.get(key) ?? 0) + line.qty);
     }
-    const productIds = [...qtyByProduct.keys()];
+    const productIds = [...new Set(input.items.map((line) => line.product_id))];
 
-    const [products, settings] = await Promise.all([
+    const [products, settings, promotions] = await Promise.all([
       q(supabase.from('products').select('*').in('id', productIds)),
       getSettings(),
+      q(supabase.from('promotions').select('*').eq('is_active', true)),
     ]);
     if (products.length !== productIds.length) {
       throw new HttpError(
@@ -77,27 +81,39 @@ export default createHandler({
     }
     const productById = new Map(products.map((p) => [p.id, p]));
 
-    // Prices, VAT and MOQ always come from the database, never from the browser.
+    // Prices, VAT and MOQ always come from the database, never from the
+    // browser. A carton line is priced at the carton price and converted to
+    // units for MOQ and quantity totals.
     let subtotal = 0;
     let vatTotal = 0;
     let totalUnits = 0;
-    const lines = productIds.map((productId) => {
+    const totalCartons = { value: 0 };
+    const lines = [...qtyByKey.entries()].map(([key, qty]) => {
+      const separator = key.lastIndexOf(':');
+      const productId = Number(key.slice(0, separator));
+      const unitType = key.slice(separator + 1);
       const product = productById.get(productId);
-      const qty = qtyByProduct.get(productId);
       const moq = Math.max(1, Number(product.moq) || 1);
-      if (qty < moq) {
-        throw new HttpError(400, `${product.name}: the minimum order quantity is ${moq}.`);
+      const byCarton = unitType === 'carton';
+      const unitsPerCarton = byCarton ? Math.max(1, Number(product.units_per_carton) || 0) : null;
+      if (byCarton && (!unitsPerCarton || product.carton_price == null)) {
+        throw new HttpError(400, `${product.name} is not sold by the carton.`);
+      }
+      const listUnitPrice = byCarton ? round2(product.carton_price) : round2(product.unit_price);
+      const convertedUnits = byCarton ? qty * unitsPerCarton : qty;
+      if (convertedUnits < moq) {
+        throw new HttpError(400, `${product.name}: the minimum order quantity is ${moq} units.`);
       }
       if (qty > 9999) {
         throw new HttpError(400, `${product.name}: the quantity cannot be more than 9999.`);
       }
-      const unitPrice = round2(product.unit_price);
       const vatRate = product.vat_rate == null ? settings.vat_rate : Number(product.vat_rate);
-      const lineSubtotal = round2(unitPrice * qty);
+      const lineSubtotal = round2(listUnitPrice * qty);
       const lineVat = round2((lineSubtotal * vatRate) / 100);
       subtotal = round2(subtotal + lineSubtotal);
       vatTotal = round2(vatTotal + lineVat);
-      totalUnits += qty;
+      totalUnits += convertedUnits;
+      if (byCarton) totalCartons.value += qty;
       return {
         product_id: product.id,
         product_name: product.name,
@@ -105,14 +121,41 @@ export default createHandler({
         pack_unit: product.pack_unit,
         moq,
         qty,
-        unit_price: unitPrice,
+        unit_type: unitType,
+        units_per_carton: unitsPerCarton,
+        list_unit_price: listUnitPrice,
+        // Charged price starts at the list price; only an administrator may
+        // lower it later, never below the product's minimum sell price.
+        unit_price: listUnitPrice,
         vat_rate: vatRate,
-        vat_per_item: round2((unitPrice * vatRate) / 100),
+        vat_per_item: round2((listUnitPrice * vatRate) / 100),
         line_subtotal: lineSubtotal,
         line_vat: lineVat,
         line_total: round2(lineSubtotal + lineVat),
       };
     });
+
+    // One promotion maximum: running now, threshold met, biggest discount.
+    // The discount applies to the VAT-inclusive total.
+    const nowMs = Date.parse(nowIso());
+    let best = null;
+    for (const promo of promotions) {
+      if (Date.parse(promo.starts_at) > nowMs || Date.parse(promo.expires_at) < nowMs) continue;
+      const met =
+        promo.threshold_type === 'order_total'
+          ? subtotal >= Number(promo.threshold_value)
+          : promo.threshold_type === 'total_units'
+            ? totalUnits >= Number(promo.threshold_value)
+            : totalCartons.value >= Number(promo.threshold_value);
+      if (!met) continue;
+      const amount =
+        promo.discount_type === 'percentage'
+          ? round2((subtotal * Number(promo.discount_value)) / 100)
+          : round2(Math.min(Number(promo.discount_value), round2(subtotal + vatTotal)));
+      if (amount <= 0) continue;
+      if (!best || amount > best.amount) best = { promo, amount };
+    }
+    const promotionDiscount = best ? Math.min(best.amount, round2(subtotal + vatTotal)) : 0;
 
     const now = nowIso();
     const order = await q(
@@ -131,8 +174,13 @@ export default createHandler({
           status: 'pending',
           subtotal,
           vat_total: vatTotal,
-          total: round2(subtotal + vatTotal),
+          total: round2(Math.max(0, round2(subtotal + vatTotal) - promotionDiscount)),
           total_units: totalUnits,
+          list_total: subtotal,
+          discount_total: promotionDiscount,
+          promotion_id: best?.promo.id ?? null,
+          promotion_name: best?.promo.name ?? null,
+          promotion_discount: promotionDiscount,
           created_at: now,
           updated_at: now,
         })
@@ -221,6 +269,78 @@ export default createHandler({
           .update({ status: 'preparing', updated_at: now })
           .eq('id', id)
           .eq('status', 'confirmed'),
+      );
+    } else if (action === 'set_item_price') {
+      // Administrator negotiation on a pending order: the price may drop to
+      // the product's minimum sell price (never below), never above list.
+      requireRole(auth, 'admin');
+      const priceInput = schemas.itemPrice.parse(body);
+      if (order.status !== 'pending') {
+        throw new HttpError(409, 'Prices can be adjusted only while the order is pending.');
+      }
+      const items = await q(supabase.from('order_items').select('*').eq('order_id', id).order('id'));
+      const target = items.find((item) => item.id === priceInput.item_id);
+      if (!target) throw new HttpError(404, 'That order line could not be found.');
+      const listPrice = Number(target.list_unit_price) || Number(target.unit_price);
+      let floor = listPrice;
+      if (target.product_id) {
+        const product = await q(
+          supabase.from('products').select('min_sell_price').eq('id', target.product_id).maybeSingle(),
+        );
+        if (product?.min_sell_price != null) floor = Number(product.min_sell_price);
+      }
+      const newPrice = round2(priceInput.unit_price);
+      if (newPrice > listPrice) {
+        throw new HttpError(400, `The price cannot be above the list price of SAR ${listPrice.toFixed(2)}.`, {
+          unit_price: `The list price is SAR ${listPrice.toFixed(2)}.`,
+        });
+      }
+      if (newPrice < floor) {
+        throw new HttpError(400, `The minimum sell price for this item is SAR ${floor.toFixed(2)}.`, {
+          unit_price: `The minimum sell price is SAR ${floor.toFixed(2)}.`,
+        });
+      }
+      const vatPerUnit = round2((newPrice * Number(target.vat_rate)) / 100);
+      const lineSubtotal = round2(newPrice * Number(target.qty));
+      const lineVat = round2(vatPerUnit * Number(target.qty));
+      await q(
+        supabase
+          .from('order_items')
+          .update({
+            unit_price: newPrice,
+            vat_per_item: vatPerUnit,
+            line_subtotal: lineSubtotal,
+            line_vat: lineVat,
+            line_total: round2(lineSubtotal + lineVat),
+          })
+          .eq('id', target.id),
+      );
+      // Re-total the order from the table so concurrent edits cannot drift.
+      const refreshed = await q(supabase.from('order_items').select('*').eq('order_id', id));
+      const newSubtotal = round2(refreshed.reduce((sum, item) => sum + Number(item.line_subtotal), 0));
+      const newVat = round2(refreshed.reduce((sum, item) => sum + Number(item.line_vat), 0));
+      const newListTotal = round2(
+        refreshed.reduce(
+          (sum, item) =>
+            sum + (Number(item.list_unit_price) || Number(item.unit_price)) * Number(item.qty),
+          0,
+        ),
+      );
+      const promotionDiscount = round2(Number(order.promotion_discount) || 0);
+      const discountTotal = round2(Math.max(0, round2(newListTotal - newSubtotal)) + promotionDiscount);
+      const newTotal = round2(Math.max(0, round2(newSubtotal + newVat) - promotionDiscount));
+      await q(
+        supabase
+          .from('orders')
+          .update({
+            subtotal: newSubtotal,
+            vat_total: newVat,
+            total: newTotal,
+            list_total: newListTotal,
+            discount_total: discountTotal,
+            updated_at: now,
+          })
+          .eq('id', id),
       );
     } else if (action === 'confirm_reception') {
       // Optional buyer-side confirmation. Only the buyer who owns the order.

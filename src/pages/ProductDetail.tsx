@@ -8,9 +8,9 @@ import { ErrorPanel, StockBadge, usePageTitle } from '../components/ui';
 import { useAuth } from '../contexts/AuthContext';
 import { useRequestList } from '../contexts/RequestListContext';
 import { useApi } from '../lib/api';
-import { percent, sar } from '../lib/format';
+import { formatDate, percent, sar } from '../lib/format';
 import { PHONE_DISPLAY, whatsappLink } from '../lib/site';
-import type { Category, Product } from '../lib/types';
+import type { Category, Product, UnitType } from '../lib/types';
 import { t } from '../lib/i18n';
 
 const ROW = 'grid grid-cols-[9rem_1fr] gap-4 border-b border-line py-3.5 sm:grid-cols-[11rem_1fr]';
@@ -48,10 +48,16 @@ export default function ProductDetail() {
   );
 
   const moq = product?.moq ?? 1;
+  const unitsPerCarton = product?.units_per_carton ?? 1;
+  const hasCarton = product?.carton_price != null;
+  const [unitType, setUnitType] = useState<UnitType>('unit');
+  // MOQ is defined in units; when ordering by the carton it converts upward.
+  const minQty =
+    unitType === 'carton' && product ? Math.max(1, Math.ceil(moq / unitsPerCarton)) : moq;
   const [draftQty, setDraftQty] = useState(moq);
   useEffect(() => {
-    setDraftQty(moq);
-  }, [slug, moq]);
+    setDraftQty(minQty);
+  }, [slug, minQty]);
 
   usePageTitle(t(product?.name ?? 'Product'), {
     description: product
@@ -108,7 +114,7 @@ export default function ProductDetail() {
     );
   }
 
-  const inList = qtyOf(product.id);
+  const inList = qtyOf(product.id, unitType);
 
   return (
     <>
@@ -211,6 +217,23 @@ export default function ProductDetail() {
                   </span>
                 </dd>
               </div>
+              {hasCarton && (
+                <div className={ROW}>
+                  <dt className="text-muted">{t("Carton price")}</dt>
+                  <dd>
+                    <span className="font-semibold">{sar(product.carton_price ?? 0)}</span>{' '}
+                    <span className="text-muted">
+                      {t("per carton of")}{' '}{product.units_per_carton}{' '}{t("units")}
+                    </span>
+                  </dd>
+                </div>
+              )}
+              {product.price_effective_from && (
+                <div className={ROW}>
+                  <dt className="text-muted">{t("Prices effective from")}</dt>
+                  <dd className="font-medium">{formatDate(product.price_effective_from)}</dd>
+                </div>
+              )}
               {projectCategory && (
                 <div className={ROW}>
                   <dt className="text-muted">{t("Project category")}</dt>
@@ -220,18 +243,39 @@ export default function ProductDetail() {
             </dl>
 
             <div className="mt-8 rounded-2xl border border-line bg-card p-5 sm:p-6">
+              {hasCarton && (
+                <div
+                  role="group"
+                  aria-label={t("Order by")}
+                  className="inline-flex rounded-full border border-line bg-white p-0.5 text-sm font-semibold"
+                >
+                  {(['unit', 'carton'] as UnitType[]).map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      aria-pressed={unitType === option}
+                      onClick={() => setUnitType(option)}
+                      className={`rounded-full px-4 py-1.5 transition-colors ${
+                        unitType === option ? 'bg-primary text-white' : 'text-muted hover:text-ink'
+                      }`}
+                    >
+                      {option === 'unit' ? t("Unit") : t("Carton")}
+                    </button>
+                  ))}
+                </div>
+              )}
               {inList > 0 ? (
                 <>
-                  <p className="flex items-center gap-2 font-semibold text-primary-strong">
+                  <p className="mt-4 flex items-center gap-2 font-semibold text-primary-strong">
                     <Check className="h-5 w-5" aria-hidden="true" />
                     {t("In your request list")}
                   </p>
                   <div className="mt-4 flex flex-wrap items-center gap-3">
                     <QtyStepper
                       value={inList}
-                      min={product.moq}
-                      onChange={(next) => setQty(product.id, next)}
-                      label={t(product.name)}
+                      min={minQty}
+                      onChange={(next) => setQty(product.id, unitType, next)}
+                      label={`${t(product.name)} (${unitType === 'carton' ? t("Carton") : t("Unit")})`}
                     />
                     <Link to="/request" className="btn btn-primary">
                       {t("View request list")}
@@ -239,7 +283,7 @@ export default function ProductDetail() {
                     </Link>
                     <button
                       type="button"
-                      onClick={() => remove(product.id)}
+                      onClick={() => remove(product.id, unitType)}
                       className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-muted transition-colors hover:bg-paper-deep hover:text-danger"
                     >
                       <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -249,30 +293,34 @@ export default function ProductDetail() {
                 </>
               ) : (
                 <>
-                  <p className="text-sm font-semibold text-ink">
+                  <p className="mt-4 text-sm font-semibold text-ink">
                     {t("Quantity")}{' '}
                     <span className="font-normal text-muted">
-                      ({t(product.pack_unit)}{' '}{t("· minimum")}{' '}{product.moq})
+                      (
+                      {unitType === 'carton'
+                        ? `${t("minimum")}{' '}${minQty} ${t("cartons")} · ${minQty * unitsPerCarton} ${t("units")}`
+                        : `${t(product.pack_unit)} · ${t("minimum")}{' '}${minQty}`}
+                      )
                     </span>
                   </p>
                   <div className="mt-3 flex flex-wrap items-center gap-3">
                     <QtyStepper
                       value={draftQty}
-                      min={product.moq}
+                      min={minQty}
                       onChange={setDraftQty}
                       label={t(product.name)}
                     />
                     <button
                       type="button"
                       className="btn btn-primary"
-                      onClick={() => add(product.id, draftQty, product.name)}
+                      onClick={() => add(product.id, draftQty, product.name, unitType)}
                     >
                       <Plus className="h-4 w-4" aria-hidden="true" />
                       {t("Add to request list")}
                     </button>
                     <a
                       href={whatsappLink(
-                        `Hello Waraq Pro, I would like to enquire about: ${t(product.name)} (${product.sku}) - Qty: ${draftQty} (${t(product.pack_unit)}).`,
+                        `Hello Waraq Pro, I would like to enquire about: ${t(product.name)} (${product.sku}) - Qty: ${draftQty} ${unitType === 'carton' ? t("Carton") : t(product.pack_unit)}.`,
                       )}
                       target="_blank"
                       rel="noopener noreferrer"

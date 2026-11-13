@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { t } from '../lib/i18n';
+import type { UnitType } from '../lib/types';
 
 export const MAX_QTY = 9999;
 const STORAGE_KEY = 'waraqpro.request_list.v1';
@@ -16,7 +17,12 @@ const STORAGE_KEY = 'waraqpro.request_list.v1';
 export interface RequestLine {
   productId: number;
   qty: number;
+  /** What the line is priced in: per unit, or per carton. */
+  unitType: UnitType;
 }
+
+/** Lines with the same product but a different unit type are separate rows. */
+export const lineKey = (productId: number, unitType: UnitType) => `${productId}:${unitType}`;
 
 interface Notice {
   id: number;
@@ -27,11 +33,11 @@ interface RequestListValue {
   lines: RequestLine[];
   count: number;
   notice: Notice | null;
-  add: (productId: number, qty: number, name: string) => void;
-  setQty: (productId: number, qty: number) => void;
-  remove: (productId: number) => void;
+  add: (productId: number, qty: number, name: string, unitType?: UnitType) => void;
+  setQty: (productId: number, unitType: UnitType, qty: number) => void;
+  remove: (productId: number, unitType: UnitType) => void;
   clear: () => void;
-  qtyOf: (productId: number) => number;
+  qtyOf: (productId: number, unitType: UnitType) => number;
   dismissNotice: () => void;
 }
 
@@ -46,6 +52,8 @@ function readStored(): RequestLine[] {
       .map((line) => ({
         productId: Number((line as RequestLine).productId),
         qty: Number((line as RequestLine).qty),
+        // Carts saved before carton pricing existed default to units.
+        unitType: (line as RequestLine).unitType === 'carton' ? 'carton' : 'unit',
       }))
       .filter(
         (line) =>
@@ -87,29 +95,35 @@ export function RequestListProvider({ children }: { children: ReactNode }) {
     setNotice(null);
   }, []);
 
-  const add = useCallback((productId: number, qty: number, name: string) => {
+  const add = useCallback((productId: number, qty: number, name: string, unitType: UnitType = 'unit') => {
     setLines((current) => {
-      const existing = current.find((line) => line.productId === productId);
+      const existing = current.find(
+        (line) => line.productId === productId && line.unitType === unitType,
+      );
       if (existing) {
         return current.map((line) =>
-          line.productId === productId ? { ...line, qty: clampQty(line.qty + qty) } : line,
+          line.productId === productId && line.unitType === unitType
+            ? { ...line, qty: clampQty(line.qty + qty) }
+            : line,
         );
       }
-      return [...current, { productId, qty: clampQty(qty) }];
+      return [...current, { productId, qty: clampQty(qty), unitType }];
     });
     if (timer.current) window.clearTimeout(timer.current);
     setNotice({ id: Date.now(), text: t("{0} added to your request list.", [t(name)]) });
     timer.current = window.setTimeout(() => setNotice(null), 4000);
   }, []);
 
-  const setQty = useCallback((productId: number, qty: number) => {
+  const setQty = useCallback((productId: number, unitType: UnitType, qty: number) => {
     setLines((current) =>
-      current.map((line) => (line.productId === productId ? { ...line, qty: clampQty(qty) } : line)),
+      current.map((line) =>
+        line.productId === productId && line.unitType === unitType ? { ...line, qty: clampQty(qty) } : line,
+      ),
     );
   }, []);
 
-  const remove = useCallback((productId: number) => {
-    setLines((current) => current.filter((line) => line.productId !== productId));
+  const remove = useCallback((productId: number, unitType: UnitType) => {
+    setLines((current) => current.filter((line) => !(line.productId === productId && line.unitType === unitType)));
   }, []);
 
   const clear = useCallback(() => setLines([]), []);
@@ -123,7 +137,8 @@ export function RequestListProvider({ children }: { children: ReactNode }) {
       setQty,
       remove,
       clear,
-      qtyOf: (productId) => lines.find((line) => line.productId === productId)?.qty ?? 0,
+      qtyOf: (productId, unitType) =>
+        lines.find((line) => line.productId === productId && line.unitType === unitType)?.qty ?? 0,
       dismissNotice,
     }),
     [lines, notice, add, setQty, remove, clear, dismissNotice],
