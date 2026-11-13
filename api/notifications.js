@@ -1,6 +1,7 @@
 import supabase from './db-client.js';
 import { createHandler, q, readBody } from './_lib/http.js';
 import { getAuth } from './_lib/auth.js';
+import { schemas } from './_lib/schemas.js';
 
 /**
  * The signed-in user's own notifications. The API reads with the service key,
@@ -9,7 +10,10 @@ import { getAuth } from './_lib/auth.js';
 export default createHandler({
   async GET(req) {
     const { profile } = await getAuth(req);
-    const [rows, unread] = await Promise.all([
+    // The count query runs with head: true, so postgrest-js returns data: null
+    // and carries the count in a separate field — it must NOT go through q(),
+    // which unwraps data only (that made this endpoint 500 on every call).
+    const [rows, counted] = await Promise.all([
       q(
         supabase
           .from('notifications')
@@ -18,23 +22,22 @@ export default createHandler({
           .order('created_at', { ascending: false })
           .limit(50),
       ),
-      q(
-        supabase
-          .from('notifications')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', profile.id)
-          .is('read_at', null),
-      ),
+      supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', profile.id)
+        .is('read_at', null),
     ]);
-    return { notifications: rows, unread: unread.count ?? 0 };
+    if (counted.error) throw counted.error;
+    return { notifications: rows, unread: counted.count ?? 0 };
   },
 
   async PATCH(req) {
     const { profile } = await getAuth(req);
     const body = readBody(req);
-    const id = Number(body?.id);
 
-    if (id) {
+    if (body?.id != null) {
+      const id = schemas.id.parse(body.id);
       const rows = await q(
         supabase
           .from('notifications')

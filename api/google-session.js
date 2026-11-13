@@ -1,4 +1,4 @@
-import { createHandler, HttpError, readBody } from './_lib/http.js';
+import { createHandler, HttpError, rateLimit, readBody } from './_lib/http.js';
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
@@ -12,6 +12,9 @@ const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
  */
 export default createHandler({
   async POST(req) {
+    // Each call makes two outbound requests (Google + Supabase); cap the
+    // hammering before those downstream services see it.
+    rateLimit(req, 'google-session', 10, 10 * 60 * 1000);
     const { code, redirect_uri } = readBody(req);
     const clientId = process.env.GOOGLE_CLIENT_ID || '';
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';

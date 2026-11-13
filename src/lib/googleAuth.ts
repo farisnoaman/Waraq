@@ -2,6 +2,10 @@ import supabase from './supabase';
 
 const isMobile = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 const STATE_KEY = 'waraqpro.google.state';
+// Fallback copy of the state for browsers where sessionStorage throws. It
+// keeps the state check fail-closed: with no stored state at all, a success
+// message is rejected instead of trusted.
+let memoryState: string | null = null;
 
 function buildGoogleUrl(appName: string): string | null {
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
@@ -9,15 +13,15 @@ function buildGoogleUrl(appName: string): string | null {
   if (!clientId || !redirectUri) return null;
   const state = btoa(
     JSON.stringify({
-      origin: window.location.origin,
       appName,
       nonce: crypto.randomUUID(),
     }),
   );
+  memoryState = state;
   try {
     window.sessionStorage.setItem(STATE_KEY, state);
   } catch {
-    /* storage unavailable: the sign-in still works, only the state check is skipped */
+    /* storage unavailable: the in-memory copy above keeps the check strict */
   }
   return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20email%20profile&prompt=select_account&state=${encodeURIComponent(state)}`;
 }
@@ -46,6 +50,7 @@ export function signInWithGoogle(appName = 'this app'): boolean {
     if (event.source !== popup) return;
     if (event.data?.type === 'google-auth-denied') {
       window.removeEventListener('message', handler);
+      memoryState = null;
       try {
         window.sessionStorage.removeItem(STATE_KEY);
       } catch {
@@ -56,16 +61,18 @@ export function signInWithGoogle(appName = 'this app'): boolean {
     if (event.data?.type !== 'google-auth-success') return;
     window.removeEventListener('message', handler);
 
-    // The state travels through Google and back. It has to match the one this
+    // The state travels through Google and back. It must match the one this
     // tab created, otherwise the session belongs to another sign-in attempt.
-    let expected: string | null = null;
+    // Fail closed: with no stored state at all, the message is not trusted.
+    let expected: string | null = memoryState;
     try {
-      expected = window.sessionStorage.getItem(STATE_KEY);
+      expected = expected ?? window.sessionStorage.getItem(STATE_KEY);
       window.sessionStorage.removeItem(STATE_KEY);
     } catch {
       /* storage unavailable */
     }
-    if (expected && event.data.state !== expected) {
+    memoryState = null;
+    if (!expected || event.data.state !== expected) {
       console.error('[google-auth] the sign-in state did not match.');
       return;
     }

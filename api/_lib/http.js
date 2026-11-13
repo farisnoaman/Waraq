@@ -18,13 +18,58 @@ export class Reply {
   }
 }
 
-function applyHeaders(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+/** Origins allowed to call the API cross-origin. The production app is
+ * same-origin and needs no CORS headers; this list exists for the dev server
+ * and any explicitly permitted consumer. Override with WARAQ_ALLOWED_ORIGINS. */
+const ALLOWED_ORIGINS = (
+  process.env.WARAQ_ALLOWED_ORIGINS ||
+  'https://waraq.pro,https://www.waraq.pro,http://localhost:5173,http://127.0.0.1:5173'
+)
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+function applyHeaders(req, res) {
+  const origin = String(req.headers.origin || '');
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Cache-Control', 'no-store');
+}
+
+/* -------------------------------------------------------------------------
+ * Per-IP rate limiting for the unauthenticated endpoints (contact form,
+ * Google code exchange). In-memory, so on Vercel each instance counts
+ * separately and on a single server it is shared — either way it stops
+ * naive floods without adding infrastructure.
+ * ---------------------------------------------------------------------- */
+const rateBuckets = new Map();
+
+export function rateLimit(req, name, limit, windowMs) {
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  const ip = forwarded || req.socket?.remoteAddress || 'unknown';
+  const key = `${name}:${ip}`;
+  const now = Date.now();
+  const entry = rateBuckets.get(key);
+  if (!entry || entry.resetAt <= now) {
+    // Occasionally drop expired buckets so the map cannot grow without bound.
+    if (rateBuckets.size > 5000) {
+      for (const [bucketKey, bucket] of rateBuckets) {
+        if (bucket.resetAt <= now) rateBuckets.delete(bucketKey);
+      }
+    }
+    rateBuckets.set(key, { count: 1, resetAt: now + windowMs });
+    return;
+  }
+  entry.count += 1;
+  if (entry.count > limit) {
+    throw new HttpError(429, 'Too many requests. Please try again in a minute.');
+  }
 }
 
 /** Parses a JSON body defensively. Always returns a plain object. */
@@ -67,7 +112,7 @@ function zodFields(error) {
  */
 export function createHandler(methods) {
   return async function handler(req, res) {
-    applyHeaders(res);
+    applyHeaders(req, res);
     if (req.method === 'OPTIONS') return res.status(204).end();
     try {
       const fn = methods[req.method];

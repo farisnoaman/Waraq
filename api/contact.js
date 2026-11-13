@@ -1,9 +1,12 @@
 import supabase from './db-client.js';
-import { createHandler, q, readBody, Reply } from './_lib/http.js';
+import { createHandler, q, rateLimit, readBody, Reply } from './_lib/http.js';
 import { schemas } from './_lib/schemas.js';
 
 export default createHandler({
   async POST(req) {
+    // Five submissions per IP per 10 minutes — the honeypot alone cannot
+    // stop a scripted flood from filling contact_messages.
+    rateLimit(req, 'contact', 5, 10 * 60 * 1000);
     const body = readBody(req);
     // Honeypot: real visitors never see or fill the "website" field.
     if (typeof body.website === 'string' && body.website.trim() !== '') {

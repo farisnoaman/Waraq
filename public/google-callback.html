@@ -33,13 +33,21 @@
         var params = new URLSearchParams(window.location.search);
         var code = params.get('code');
         var state = params.get('state');
+        // The tokens go to the opener at the origin the flow initiator wrote
+        // into the state (the app may run on localhost while this callback
+        // page is hosted on the production domain). This is safe because the
+        // opener rejects any message whose state does not match the one it
+        // generated — an attacker-crafted state cannot pass that check, so
+        // foreign-origin targets only ever receive the attacker's own tokens.
         var origin = window.location.origin;
 
         try {
           var decoded = JSON.parse(atob(state || ''));
-          if (decoded && decoded.origin) origin = decoded.origin;
+          if (decoded && typeof decoded.origin === 'string' && /^https?:\/\//.test(decoded.origin)) {
+            origin = decoded.origin;
+          }
         } catch (err) {
-          /* the state is optional for the redirect */
+          /* malformed state: fall back to this page's origin */
         }
 
         function close(message, isError) {
