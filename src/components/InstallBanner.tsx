@@ -23,10 +23,14 @@ function dismiss() {
   }
 }
 
-/** iOS Safari has no beforeinstallprompt; there the banner explains the steps. */
-function isIOS(): boolean {
+/** Auto-detect the visitor's platform so the instructions match their device. */
+function detectOS(): 'ios' | 'android' | 'desktop' {
   const ua = navigator.userAgent;
-  return /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+  if (/iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1)) {
+    return 'ios';
+  }
+  if (/android/i.test(ua)) return 'android';
+  return 'desktop';
 }
 
 /**
@@ -39,6 +43,7 @@ export default function InstallBanner() {
   const { canPrompt, isInstalled, install } = useInstallPrompt();
   const [visible, setVisible] = useState(false);
   const [installing, setInstalling] = useState(false);
+  const os = detectOS();
 
   useEffect(() => {
     if (isInstalled || wasDismissed()) return;
@@ -46,7 +51,11 @@ export default function InstallBanner() {
     return () => window.clearTimeout(timer);
   }, [isInstalled]);
 
-  const relevant = canPrompt || isIOS();
+  // Show everywhere an install path exists: a native prompt (Android and
+  // desktop Chromium browsers) or step-by-step instructions (iOS, Android
+  // browsers that skip the prompt). Desktop browsers with no install path
+  // (e.g. Firefox) stay quiet.
+  const relevant = canPrompt || os !== 'desktop';
 
   const onInstall = async () => {
     setInstalling(true);
@@ -99,7 +108,9 @@ export default function InstallBanner() {
             <p className="mt-0.5 text-sm leading-relaxed text-paper/75">
               {canPrompt
                 ? t("Add it to your device — it opens like an app and keeps your orders available offline.")
-                : t('In Safari, tap Share and choose “Add to Home Screen”.')}
+                : os === 'ios'
+                  ? t('In Safari, tap Share and choose “Add to Home Screen”.')
+                  : t('Open the browser menu (⋮) and choose “Install app” or “Add to Home screen”.')}
             </p>
             {canPrompt && (
               <button

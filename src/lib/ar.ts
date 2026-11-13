@@ -1088,6 +1088,7 @@ export const ar: Record<string, string> = {
   "Add it to your device — it opens like an app and keeps your orders available offline.": "أضِفه إلى جهازك — يفتح كتطبيق وتبقى طلباتك متاحة دون اتصال.",
   "Install": "تثبيت",
   "In Safari, tap Share and choose “Add to Home Screen”.": "في سفاري، اضغط «مشاركة» ثم اختر «إضافة إلى الشاشة الرئيسية».",
+  "Open the browser menu (⋮) and choose “Install app” or “Add to Home screen”.": "افتح قائمة المتصفح (⋮) واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».",
   "Your order is confirmed": "تم تأكيد طلبك",
   "Your order is on the way": "طلبك في الطريق",
   "New delivery assigned": "تم إسناد توصيل جديد",
