@@ -48,7 +48,7 @@ export default function RequestPage() {
     name: '',
     company: '',
     phone: '',
-    city: 'Jeddah',
+    city: 'Riyadh',
     address: '',
     notes: '',
   });
@@ -456,7 +456,7 @@ export default function RequestPage() {
                   label={t("Delivery city")}
                   required
                   autoComplete="address-level2"
-                  placeholder={t("For example, Jeddah")}
+                  placeholder={t("For example, Riyadh")}
                   maxLength={80}
                   value={values.city}
                   onChange={set('city')}

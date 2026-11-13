@@ -19,6 +19,8 @@ collect payments; the administrator runs the catalogue, deliveries, payments, co
 
 ### Accounts and roles
 - Sign in with email and password or with Google. Every new account starts as a **buyer**.
+- A buyer can forward the placed order to Waraq Pro on WhatsApp in one tap from the confirmation screen.
+- In-app notifications: the bell in the header tells a buyer when the admin confirms an order and when it is dispatched, an administrator about every new order, and staff about a new delivery assignment. The text follows the language the reader chose.
 - Three roles: **buyer**, **staff**, **admin**. Roles are stored in Supabase Auth `app_metadata`, which only the server can write.
 - Every API request verifies the session and the role on the server. The browser guards only decide what is shown.
 - Sign-out for every role, and automatic sign-out after 10 minutes without activity (with a one-minute warning).

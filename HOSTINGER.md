@@ -92,23 +92,37 @@ Google provider.
 
 ### 1.3a Google sign-in (when the Supabase Google provider is used)
 
-With both `VITE_GOOGLE_*` variables empty the app calls Supabase's Google
-provider, so Google must accept the **Supabase callback** as a redirect target.
-Add this URI in **Google Cloud Console → APIs & Services → Credentials → your
-OAuth client → Authorized redirect URIs**:
+### 1.3a Google sign-in
+
+There are two ways to do it, and the app supports both.
+
+**A. The app's own callback (recommended, no Google console changes).**
+The app sends the browser to Google itself and the server swaps the returned
+code for a Supabase session, so the Google client secret never reaches the
+browser. The redirect URI is `VITE_GOOGLE_AUTH_PROXY`, which must be one of the
+URIs already authorised in the Google console. This project uses:
+
+```
+https://waraq.pro/
+```
+
+`https://waraq.pro/buyer` is the other authorised entry and works just as well;
+`http://localhost:5173/` and `http://localhost:5173/buyer` are for the Vite dev
+server only. The server answers any navigation carrying `code` and `state` with
+the callback page, and the service worker lets that request reach the network.
+
+**B. Supabase's Google provider.** Leave both `VITE_GOOGLE_*` variables empty.
+Supabase then redirects the browser to Google with its own callback, which must
+be authorised in the Google console:
 
 ```
 https://rhqnxzzrxiqgiayvjmgr.supabase.co/auth/v1/callback
 ```
 
 Without it Google answers `Error 400: redirect_uri_mismatch` and the sign-in
-window stops on an "Access blocked" page. The `https://waraq.pro/buyer` entry in
-Google is only used by the optional self-hosted proxy flow
-(`VITE_GOOGLE_AUTH_PROXY`), which this repository does not ship.
-
-In **Supabase → Authentication → Providers → Google**, put the OAuth client id
-and client secret from the Google console, and copy the client's id into
-`VITE_GOOGLE_CLIENT_ID` only if you intend to use the proxy flow.
+window stops on an "Access blocked" page. Whichever path is chosen, the Google
+client id and secret also have to be entered in
+**Supabase → Authentication → Providers → Google**.
 
 ### 1.4 Administrator
 
@@ -127,6 +141,20 @@ a display mirror; authorisation comes from that env var and
 the tables directly, bypassing the API. All app traffic goes through the server's
 service key, so RLS protects direct database access only — but it must be on.
 
+### 1.6 Notifications
+
+`0002_notifications.sql` adds the `notifications` table that powers the bell in
+the header: a buyer is told when the admin confirms the order and when it is
+dispatched, an administrator is told about every new order, and staff are told
+about a new delivery assignment. Run it in the same SQL editor as the other two
+files, after them. It is safe to run again: the table, indexes and policies are
+all created with `if not exists` or dropped first.
+
+The text is rendered in the browser from the notification type, so it follows
+the language the reader chose. Notification creation never blocks the action it
+belongs to — if the table is missing the order still goes through and the server
+logs `[notify] could not create a notification`.
+
 ---
 
 ## 2. Environment variables
@@ -137,10 +165,12 @@ There are two classes, and they are not interchangeable.
 |---|---|---|---|
 | `VITE_SUPABASE_URL` | **build** | yes | inlined into the bundle |
 | `VITE_SUPABASE_ANON_KEY` | **build** | yes | publishable/anon key only |
-| `VITE_GOOGLE_CLIENT_ID` | build | yes | optional |
-| `VITE_GOOGLE_AUTH_PROXY` | build | yes | optional |
+| `VITE_GOOGLE_CLIENT_ID` | build | yes | the Google OAuth client id |
+| `VITE_GOOGLE_AUTH_PROXY` | build | yes | the redirect URI Google sends the visitor back to, for example `https://waraq.pro/` |
 | `NEXT_PUBLIC_SUPABASE_URL` | runtime | no | same project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | runtime | **never** | secret/service_role key |
+| `GOOGLE_CLIENT_ID` | runtime | no | the same client id, for the server side of the sign-in |
+| `GOOGLE_CLIENT_SECRET` | runtime | **never** | the Google client secret. Server only, it never reaches the browser |
 | `WARAQ_ADMIN_USER_IDS` | runtime | no | admin UUID(s), comma separated |
 | `PORT` | runtime | no | do **not** set it on Hostinger |
 

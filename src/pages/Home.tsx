@@ -94,7 +94,7 @@ export default function Home() {
   );
 
   const stats = [
-    { value: '2015', label: 'Established in Jeddah' },
+    { value: '2015', label: 'Established in Riyadh' },
     {
       value: categories.data ? String(productCategories.length) : null,
       label: 'Product categories',
@@ -116,7 +116,7 @@ export default function Home() {
               custom={0}
               className="eyebrow inline-flex flex-wrap items-center gap-x-3 gap-y-1 text-brass-soft"
             >
-              <span>{t("Jeddah")}</span>
+              <span>{t("Riyadh")}</span>
               <span aria-hidden="true" className="h-1 w-1 rounded-full bg-brass" />
               <span>{t("Kingdom of Saudi Arabia")}</span>
               <span aria-hidden="true" className="h-1 w-1 rounded-full bg-brass" />
@@ -139,7 +139,7 @@ export default function Home() {
               custom={2}
               className="mt-6 max-w-xl text-lg text-paper/80 sm:text-xl"
             >
-              {t("Waraq Pro (")}{SITE_DOMAIN}{t(") is a Jeddah supplier established in 2015. Send us one request and we take care of the rest: confirmation, sourcing, quality check and door-to-door delivery.")}
+              {t("Waraq Pro (")}{SITE_DOMAIN}{t(") is a Riyadh supplier established in 2015. Send us one request and we take care of the rest: confirmation, sourcing, quality check and door-to-door delivery.")}
             </motion.p>
             <motion.div
               variants={heroVariants}
@@ -240,7 +240,7 @@ export default function Home() {
         <Reveal className="lg:col-span-5">
           <p className="eyebrow text-primary-strong">{t("About Waraq Pro")}</p>
           <h2 className="mt-3 text-3xl leading-[1.1] sm:text-4xl lg:text-[2.75rem]">
-            {t("A Jeddah supplier, established in 2015.")}
+            {t("A Riyadh supplier, established in 2015.")}
           </h2>
           <p
             lang="ar"

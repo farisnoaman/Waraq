@@ -20,7 +20,7 @@ import { t } from '../lib/i18n';
 export default function Services() {
   usePageTitle(t('Services'), {
     description: t(
-      'From request to delivery: Waraq Pro handles sourcing, quotations, supply and delivery of paper, packaging and office products in Jeddah.',
+      'From request to delivery: Waraq Pro handles sourcing, quotations, supply and delivery of paper, packaging and office products in Riyadh.',
     ),
   });
   const services = useApi<ServiceItem[]>('/api/services');

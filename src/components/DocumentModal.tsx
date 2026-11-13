@@ -9,11 +9,20 @@ import {
   sar,
   ltr,
 } from '../lib/format';
-import { PHONE_DISPLAY, SITE_DOMAIN, SITE_EMAIL, SITE_NAME } from '../lib/site';
+import {
+  PHONE_DISPLAY,
+  SITE_DOMAIN,
+  SITE_EMAIL,
+  SITE_NAME,
+  SITE_POSTAL_CODE,
+  SITE_SHORT_ADDRESS,
+  SITE_VAT_NUMBER,
+  siteAddress,
+} from '../lib/site';
 import type { Installment, Order } from '../lib/types';
 import Logo from './Logo';
 import { OrderItemsTable, OrderSummary } from './OrderBreakdown';
-import { t } from '../lib/i18n';
+import { t, useLang } from '../lib/i18n';
 
 interface Props {
   order: Order;
@@ -27,6 +36,10 @@ interface Props {
 export default function DocumentModal({ order, installment, sellerVatNumber, onClose }: Props) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const isReceipt = Boolean(installment);
+  const lang = useLang();
+  // Bills always carry the company VAT: fall back to the registered number
+  // when the administrator has not saved one in Settings yet.
+  const vat = sellerVatNumber || SITE_VAT_NUMBER;
 
   useEffect(() => {
     document.documentElement.classList.add('doc-open');
@@ -83,13 +96,15 @@ export default function DocumentModal({ order, installment, sellerVatNumber, onC
             <p className="mt-3 text-sm text-muted">
               {SITE_NAME} · {SITE_DOMAIN}
               <br />
-              {t("Jeddah, Kingdom of Saudi Arabia")}
+              {siteAddress(lang)}
+              <br />
+              {t("Postal code")}{' '}{SITE_POSTAL_CODE} · {t("Short address")}{' '}{SITE_SHORT_ADDRESS}
               <br />
               {SITE_EMAIL} · {PHONE_DISPLAY}
-              {sellerVatNumber ? (
+              {vat ? (
                 <>
                   <br />
-                  {t("VAT registration no.")}{' '}<span className="font-semibold text-ink">{sellerVatNumber}</span>
+                  {t("VAT registration no.")}{' '}<span className="font-semibold text-ink">{vat}</span>
                 </>
               ) : null}
             </p>

@@ -12,9 +12,18 @@ import {
   usePageTitle,
 } from '../components/ui';
 import { api, ApiError, errorMessage } from '../lib/api';
-import { mailtoLink, PHONE_DISPLAY, SITE_DOMAIN, SITE_EMAIL, whatsappLink } from '../lib/site';
+import {
+  mailtoLink,
+  PHONE_DISPLAY,
+  SITE_DOMAIN,
+  SITE_EMAIL,
+  SITE_POSTAL_CODE,
+  SITE_SHORT_ADDRESS,
+  siteAddress,
+  whatsappLink,
+} from '../lib/site';
 import { schemas, validate, type FieldErrors } from '../lib/validation';
-import { t } from '../lib/i18n';
+import { t, useLang } from '../lib/i18n';
 
 const SUBJECTS = ['General enquiry', 'Product enquiry', 'Quotation', 'Delivery'];
 const MESSAGE_LIMIT = 2000;
@@ -33,9 +42,10 @@ const EMPTY = {
 export default function Contact() {
   usePageTitle(t('Contact'), {
     description: t(
-      'Contact Waraq Pro in Jeddah for paper, packaging and office supply enquiries, quotations and orders.',
+      'Contact Waraq Pro in Riyadh for paper, packaging and office supply enquiries, quotations and orders.',
     ),
   });
+  const lang = useLang();
   const [values, setValues] = useState(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [sending, setSending] = useState(false);
@@ -150,7 +160,10 @@ export default function Contact() {
                 <MapPin className="h-6 w-6" aria-hidden="true" />
               </span>
               <p className="eyebrow mt-5 text-muted">{t("Location")}</p>
-              <p className="mt-2 font-display text-xl">{t("Jeddah, Kingdom of Saudi Arabia")}</p>
+              <p className="mt-2 font-display text-xl">{siteAddress(lang)}</p>
+              <p className="mt-1 text-sm text-muted">
+                {t("Postal code")}{' '}{SITE_POSTAL_CODE} · {t("Short address")}{' '}{SITE_SHORT_ADDRESS}
+              </p>
               <p className="mt-1 text-sm text-muted">{t("Established 2015 ·")}{' '}{SITE_DOMAIN}</p>
             </div>
             <div className="rounded-2xl border border-line bg-card p-6">

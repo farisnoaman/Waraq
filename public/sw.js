@@ -19,9 +19,7 @@ const CORE = [
   '/index.html',
   '/manifest.json',
   '/favicon.svg',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/maskable-512.png',
+  '/icons/icon-maskable.svg',
   '/images/hero-warehouse.jpg',
 ];
 const PUBLIC_API = ['/api/products', '/api/categories', '/api/services'];

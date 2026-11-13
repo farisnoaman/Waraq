@@ -67,10 +67,10 @@ export function usePageTitle(
   useEffect(() => {
     const fullTitle = title
       ? `${title} | ${t('Waraq Pro')} (waraq.pro)`
-      : t('Waraq Pro | Paper, packaging and office supply in Jeddah (waraq.pro)');
+      : t('Waraq Pro | Paper, packaging and office supply in Riyadh (waraq.pro)');
     const description =
       options?.description ??
-      t('Paper, packaging and office supply in Jeddah. From your request to delivery at your door.');
+      t('Paper, packaging and office supply in Riyadh. From your request to delivery at your door.');
     const url = `https://waraq.pro${window.location.pathname}`;
     const image = options?.image ?? 'https://waraq.pro/images/hero-warehouse.jpg';
     const robots = options?.noIndex

@@ -9,7 +9,8 @@ export async function getSettings() {
   return {
     vat_rate: Number(row?.vat_rate ?? 15),
     default_commission_rate: Number(row?.default_commission_rate ?? 2),
-    seller_vat_number: row?.seller_vat_number ?? '',
+    // Falls back to the registered company number until the admin saves one in Settings.
+    seller_vat_number: row?.seller_vat_number || '314635632800003',
   };
 }
 
