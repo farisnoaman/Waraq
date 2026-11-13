@@ -28,7 +28,7 @@ export function setAccessToken(token: string | null) {
 }
 
 interface Options {
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   /** Set to false for public endpoints so responses stay cacheable offline. */
   auth?: boolean;

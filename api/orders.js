@@ -7,6 +7,8 @@ import {
   getSettings,
   hydrateOrders,
   nowIso,
+  notify,
+  notifyAdmins,
   round2,
 } from './_lib/workflow.js';
 
@@ -168,6 +170,13 @@ export default createHandler({
     }
 
     const [hydrated] = await hydrateOrders([saved]);
+
+    await notifyAdmins({
+      type: 'order_new',
+      params: { buyer_name: saved.buyer_name, reference: saved.reference, total: round2(saved.total) },
+      orderId: saved.id,
+    });
+
     return new Reply(201, { order: hydrated, seller_vat_number: settings.seller_vat_number });
   },
 
@@ -195,6 +204,12 @@ export default createHandler({
       if (!rows.length) throw new HttpError(409, 'This order was already updated. Refresh to see it.');
       // Workflow automation: a confirmed order always gets a draft delivery.
       await ensureDraftDelivery(id);
+      await notify({
+        userId: order.buyer_id,
+        type: 'order_confirmed',
+        params: { reference: order.reference },
+        orderId: id,
+      });
     } else if (action === 'prepare') {
       requireRole(auth, 'admin');
       if (order.status !== 'confirmed') {

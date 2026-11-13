@@ -1074,5 +1074,17 @@ export const ar: Record<string, string> = {
   "Browse paper, packaging and office supplies in Riyadh. Add items to your request list and get a clear quotation from Waraq Pro.": "تصفح الورق ومواد التعبئة والمستلزمات المكتبية في الرياض. أضف ما تحتاج إليه إلى قائمة طلبك واحصل على عرض سعر واضح من ورق برو.",
   "From request to delivery: Waraq Pro handles sourcing, quotations, supply and delivery of paper, packaging and office products in Riyadh.": "من الطلب إلى التسليم: تتولى ورق برو التوريد وعروض الأسعار وتزويد وتوصيل الورق ومواد التعبئة والمستلزمات المكتبية في الرياض.",
   "Postal code": "الرمز البريدي",
-  "Short address": "العنوان المختصر"
+  "Short address": "العنوان المختصر",
+  "Notifications": "الإشعارات",
+  "Notification": "إشعار",
+  "New notification": "إشعار جديد",
+  "Mark all as read": "تحديد الكل كمقروء",
+  "View order": "عرض الطلب",
+  "Your order is confirmed": "تم تأكيد طلبك",
+  "Your order is on the way": "طلبك في الطريق",
+  "New delivery assigned": "تم إسناد توصيل جديد",
+  "{0} placed order {1} for {2} SAR.": "أنشأ {0} الطلب {1} بقيمة {2} ر.س.",
+  "Order {0} has been confirmed by Waraq Pro and is being prepared.": "تم تأكيد الطلب {0} من ورق برو وجارٍ تجهيزه.",
+  "Order {0} has been dispatched and is on its way to you.": "تم شحن الطلب {0} وهو في طريقه إليك.",
+  "You were assigned the delivery for order {0}.": "تم إسناد إليك توصيل الطلب {0}."
 };

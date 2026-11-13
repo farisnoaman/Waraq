@@ -189,3 +189,53 @@ export async function hydrateOrders(orders) {
     payment: paymentByOrder.get(order.id) ?? null,
   }));
 }
+
+/* ---------------------------------------------------------------------
+ * Notifications
+ * ------------------------------------------------------------------- */
+
+export async function notify({ userId, type, params = {}, orderId = null }) {
+  if (!userId) return;
+  try {
+    await q(
+      supabase.from('notifications').insert({
+        user_id: userId,
+        type,
+        params,
+        order_id: orderId,
+      }),
+    );
+  } catch (err) {
+    // Notifications are best effort: a missing table or a failed insert must
+    // never take the order, delivery or payment it belongs to down with it.
+    console.warn('[notify] could not create a notification:', err?.message);
+  }
+}
+
+export async function adminUserIds() {
+  const ids = new Set(
+    String(process.env.WARAQ_ADMIN_USER_IDS || '')
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean),
+  );
+
+  const { data } = await supabase.auth.admin.listUsers({ perPage: 100 });
+  for (const user of data?.users ?? []) {
+    if (user.app_metadata?.role === 'admin') ids.add(user.id);
+  }
+  return [...ids];
+}
+
+export async function notifyAdmins({ type, params = {}, orderId = null }) {
+  const ids = await adminUserIds();
+  for (const id of ids) {
+    await notify({ userId: id, type, params, orderId });
+  }
+}
+
+/** The order row, only the fields a notification needs. */
+export async function orderSummary(id) {
+  const order = await q(supabase.from('orders').select('*').eq('id', id).maybeSingle());
+  return order;
+}

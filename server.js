@@ -78,6 +78,7 @@ const API_ROUTES = new Set([
   'orders',
   'operations',
   'google-session',
+  'notifications',
 ]);
 
 // Security headers are defined once, in vercel.json, and reused here.

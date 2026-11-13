@@ -7,6 +7,7 @@ import {
   ensurePayment,
   getSettings,
   nowIso,
+  notify,
   round2,
 } from './_lib/workflow.js';
 
@@ -76,6 +77,15 @@ async function updateDelivery(body, auth) {
         .eq('id', delivery.order_id)
         .in('status', ['confirmed', 'preparing']),
     );
+    const order = await q(
+      supabase.from('orders').select('id, reference, buyer_name').eq('id', delivery.order_id).maybeSingle(),
+    );
+    await notify({
+      userId: input.staff_id,
+      type: 'delivery_assigned',
+      params: { reference: order?.reference ?? `#${delivery.order_id}` },
+      orderId: delivery.order_id,
+    });
     return { ok: true };
   }
 
@@ -131,6 +141,21 @@ async function updateDelivery(body, auth) {
         .eq('id', delivery.order_id)
         .in('status', ['confirmed', 'preparing', 'under_processing']),
     );
+    const order = await q(
+      supabase
+        .from('orders')
+        .select('id, reference, buyer_id')
+        .eq('id', delivery.order_id)
+        .maybeSingle(),
+    );
+    if (order) {
+      await notify({
+        userId: order.buyer_id,
+        type: 'order_on_the_way',
+        params: { reference: order.reference },
+        orderId: order.id,
+      });
+    }
     return { ok: true };
   }
 

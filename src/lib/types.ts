@@ -230,3 +230,25 @@ export interface ContactMessage {
   message: string;
   created_at: string;
 }
+
+export type NotificationType =
+  | 'info'
+  | 'order_new'
+  | 'order_confirmed'
+  | 'order_on_the_way'
+  | 'delivery_assigned';
+
+export interface NotificationItem {
+  id: number;
+  user_id: string;
+  type: NotificationType;
+  params: Record<string, string | number>;
+  order_id: number | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface NotificationsResponse {
+  notifications: NotificationItem[];
+  unread: number;
+}
