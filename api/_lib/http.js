@@ -76,6 +76,19 @@ export function rateLimit(req, name, limit, windowMs) {
 export function readBody(req) {
   const raw = req.body;
   if (raw == null || raw === '') return {};
+  // The server hands over the untouched bytes for anything that is not JSON.
+  if (Buffer.isBuffer(raw)) {
+    const text = raw.toString('utf8');
+    if (!text) return {};
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      throw new HttpError(400, 'The request body is not valid JSON.');
+    }
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+    throw new HttpError(400, 'The request body must be a JSON object.');
+  }
   if (typeof raw === 'string') {
     let parsed;
     try {
