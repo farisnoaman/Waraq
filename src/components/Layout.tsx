@@ -203,7 +203,7 @@ function Header() {
         </nav>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-          <NotificationBell />
+          {profile && <NotificationBell />}
           {/* Language toggle: Arabic (default, right-to-left) <-> English.
               On phones it moves into the menu below to keep one tidy row. */}
           <button
