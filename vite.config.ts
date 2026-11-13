@@ -102,6 +102,14 @@ export default defineConfig(async ({ mode }) => {
     envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
     env: browserEnv,
     define: processEnvDefines,
+    server: {
+      // `npm run dev` serves only the SPA, which calls relative /api routes.
+      // Run `node server.js` in a second terminal (port 3000, uses .env) and
+      // this proxy forwards every /api request to it.
+      proxy: {
+        '/api': 'http://127.0.0.1:3000',
+      },
+    },
     build: {
       sourcemap: true,
       rollupOptions: {
