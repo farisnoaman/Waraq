@@ -16,7 +16,8 @@ import { clearOfflineData } from '../lib/offline';
 import { signInWithGoogle } from '../lib/googleAuth';
 import { SITE_NAME } from '../lib/site';
 import type { Profile } from '../lib/types';
-import { t } from '../lib/i18n';
+import { t, getLang } from '../lib/i18n';
+import { enableWebPush } from '../lib/push';
 
 const PROFILE_KEY = 'waraqpro.profile.v1';
 const ACTIVITY_KEY = 'waraqpro.last_activity.v1';
@@ -140,6 +141,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         writeCachedProfile(fresh);
         setProfile(fresh);
         setOfflineSession(false);
+        // Ask once for push notifications now that we know who this is.
+        void enableWebPush(getLang());
         return fresh;
       } catch (err) {
         const cached = readCachedProfile();

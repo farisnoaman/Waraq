@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from './api';
+import { updateBadge } from './push';
 import { t } from './i18n';
 import type { NotificationItem, NotificationType, NotificationsResponse } from './types';
 
@@ -89,6 +90,11 @@ export function useNotifications(onNew?: (item: NotificationItem) => void) {
       window.clearInterval(timer);
     };
   }, [reload]);
+
+  // Mirror the unread count onto the installed app's icon (Badging API).
+  useEffect(() => {
+    if (data) updateBadge(data.unread);
+  }, [data]);
 
   const markAllRead = useCallback(async () => {
     await api('/api/notifications', { method: 'PATCH', body: {} });
