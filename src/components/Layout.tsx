@@ -84,18 +84,17 @@ function TopBar() {
       className="on-dark bg-forest text-on-dark/85 print:hidden"
     >
       <div className="container-x flex min-h-9 flex-wrap items-center justify-between gap-x-4 gap-y-1 py-1.5 text-[13px]">
-        <p className="flex items-center gap-1.5">
+        <p className="hidden items-center gap-1.5 sm:flex">
           <MapPin className="h-3.5 w-3.5 text-brass-soft" aria-hidden="true" />
-          <span className="sm:hidden">{t("Riyadh ·")}{' '}{SITE_DOMAIN}</span>
-          <span className="hidden sm:inline">{t("Riyadh, Kingdom of Saudi Arabia ·")}{' '}{SITE_DOMAIN}</span>
+          <span>{t("Riyadh, Kingdom of Saudi Arabia ·")}{' '}{SITE_DOMAIN}</span>
         </p>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <InstallButton />
+          <span className="hidden sm:inline-flex"><InstallButton /></span>
           <a
             href={whatsappLink('Hello Waraq Pro, I have an enquiry about your products.')}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 font-medium text-on-dark transition-colors hover:text-primary-bright"
+            className="hidden items-center gap-1.5 font-medium text-on-dark transition-colors hover:text-primary-bright sm:inline-flex"
           >
             <WhatsAppIcon className="h-3.5 w-3.5 text-brass-soft" />
             <span>{PHONE_DISPLAY}</span>
