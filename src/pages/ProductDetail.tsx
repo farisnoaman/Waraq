@@ -184,7 +184,7 @@ export default function ProductDetail() {
               )}
               <StockBadge inStock={product.in_stock} />
               {product.promotion && (
-                <span className="rounded-full bg-brass px-2.5 py-1 text-xs font-bold text-white">
+                <span className="rounded-full bg-brand-lime px-2.5 py-1 text-xs font-bold text-ink">
                   {product.promotion.discount_type === 'percentage'
                     ? t("Discount {0}", [`${product.promotion.discount_value}%`])
                     : t("Discount {0}", [sar(product.promotion.discount_value)])}

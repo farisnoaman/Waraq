@@ -78,7 +78,7 @@ export default function ProductCard({ product, categoryName, projectCategoryName
           <StockBadge inStock={product.in_stock} solid />
         </span>
         {product.promotion && (
-          <span className="absolute bottom-3 start-3 rounded-full bg-brass px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
+          <span className="absolute bottom-3 start-3 rounded-full bg-brand-lime px-2.5 py-1 text-[11px] font-bold text-ink shadow-sm">
             {product.promotion.discount_type === 'percentage'
               ? t("Discount {0}", [`${product.promotion.discount_value}%`])
               : t("Discount {0}", [sar(product.promotion.discount_value)])}
