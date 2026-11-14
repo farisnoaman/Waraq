@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import {
   BadgePercent,
+  Car,
+  ClipboardCheck,
   ClipboardList,
   Inbox,
   LayoutGrid,
@@ -33,6 +35,8 @@ import PaymentsTab from './PaymentsTab';
 import PromotionsTab from './PromotionsTab';
 import SettingsTab from './SettingsTab';
 import UsersTab from './UsersTab';
+import VehiclesTab from './VehiclesTab';
+import RequestsTab from './RequestsTab';
 import type { OpsProps } from './shared';
 import { t } from '../../lib/i18n';
 
@@ -106,6 +110,8 @@ export default function AdminPortal() {
     { to: 'catalog', label: 'Catalog', icon: LayoutGrid, adminOnly: true },
     { to: 'orders', label: 'Orders', icon: ClipboardList, count: orders.length },
     { to: 'deliveries', label: 'Deliveries', icon: Truck, count: withDelivery },
+    { to: 'vehicles', label: 'Vehicles', icon: Car },
+    { to: 'requests', label: 'Requests', icon: ClipboardCheck },
     { to: 'payments', label: 'Payments', icon: Wallet, count: withPayment },
     { to: 'promotions', label: 'Promotions', icon: Tags, adminOnly: true },
     { to: 'commissions', label: 'Commissions', icon: BadgePercent },
@@ -164,7 +170,7 @@ export default function AdminPortal() {
       </PageHeader>
 
       <div className="relative z-30 border-b border-line bg-paper/95 backdrop-blur-md lg:sticky lg:top-[68px] print:hidden">
-        <nav aria-label={t("Operations")} className="container-x py-2.5">
+        <nav aria-label={t("Operations")} className="mx-auto w-full max-w-[80rem] px-1 py-2.5 sm:px-1.5 lg:px-2">
           {/* Phones and tablets: equal-width tiles, 2 columns on phones and
               3 on wider screens. Not sticky here so the grid never eats the
               small screen. */}
@@ -226,7 +232,7 @@ export default function AdminPortal() {
         </nav>
       </div>
 
-      <section className="container-x py-8 lg:py-12">
+      <section className="mx-auto w-full max-w-[80rem] px-1 py-8 sm:px-1.5 lg:px-2 lg:py-12">
         {error && (
           <div className="mb-6">
             <ErrorPanel message={error} onRetry={() => void reload()} />
@@ -246,6 +252,8 @@ export default function AdminPortal() {
             <Route path="catalog" element={adminOnly(<CatalogTab />)} />
             <Route path="orders" element={<OrdersTab {...ops} />} />
             <Route path="deliveries" element={<DeliveriesTab {...ops} />} />
+            <Route path="vehicles" element={<VehiclesTab {...ops} />} />
+            <Route path="requests" element={<RequestsTab {...ops} />} />
             <Route path="payments" element={<PaymentsTab {...ops} />} />
             <Route path="promotions" element={adminOnly(<PromotionsTab {...ops} />)} />
             <Route path="commissions" element={<CommissionsTab {...ops} />} />

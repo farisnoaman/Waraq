@@ -264,7 +264,7 @@ export default function Products() {
         description={t("Filter the catalogue by product or project category, add what you need to your request list, and place your order with a full VAT breakdown.")}
       />
 
-      <section className="container-x py-10 lg:py-14">
+      <section className="mx-auto w-full max-w-[80rem] px-1 py-10 sm:px-1.5 lg:px-2 lg:py-14">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <label htmlFor="product-search" className="sr-only">
