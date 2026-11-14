@@ -34,6 +34,11 @@ export function notificationText(item: Pick<NotificationItem, 'type' | 'params'>
         title: t('New delivery assigned'),
         body: t('You were assigned the delivery for order {0}.', [p.reference ?? '']),
       };
+    case 'message_new':
+      return {
+        title: t('New inbox message'),
+        body: t('Message from {0} ({1}).', [String(p.name ?? ''), String(p.subject ?? '')]),
+      };
     default:
       return { title: t('Notification'), body: '' };
   }

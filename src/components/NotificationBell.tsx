@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, Check, ClipboardList, Truck, X } from 'lucide-react';
+import { Bell, Check, ClipboardList, Inbox, Truck, X } from 'lucide-react';
 import { useNotifications, notificationText } from '../lib/notifications';
 import { formatDateTime } from '../lib/format';
 import type { NotificationItem, NotificationType } from '../lib/types';
@@ -14,6 +14,7 @@ const TYPE_ICON: Record<NotificationType, typeof Bell> = {
   order_confirmed: Check,
   order_on_the_way: Truck,
   delivery_assigned: Truck,
+  message_new: Inbox,
 };
 
 const TYPE_LABEL: Record<NotificationType, string> = {
@@ -22,6 +23,7 @@ const TYPE_LABEL: Record<NotificationType, string> = {
   order_confirmed: 'Your order is confirmed',
   order_on_the_way: 'Your order is on the way',
   delivery_assigned: 'New delivery assigned',
+  message_new: 'New inbox message',
 };
 
 function Toast({ item, onClose }: { item: NotificationItem; onClose: () => void }) {

@@ -151,8 +151,10 @@ export interface Delivery {
   staff_email: string | null;
   staff_phone: string | null;
   staff_accepted_at: string | null;
+  vehicle_id: number | null;
   vehicle_type: string | null;
   vehicle_plate: string | null;
+  dispatch_odometer: number | null;
   assigned_at: string | null;
   dispatched_at: string | null;
   delivered_at: string | null;
@@ -261,6 +263,7 @@ export interface Settings {
   vat_rate: number;
   default_commission_rate: number;
   seller_vat_number: string;
+  require_odometer_on_dispatch?: boolean;
   tiers: Tier[];
 }
 
@@ -287,7 +290,8 @@ export type NotificationType =
   | 'order_new'
   | 'order_confirmed'
   | 'order_on_the_way'
-  | 'delivery_assigned';
+  | 'delivery_assigned'
+  | 'message_new';
 
 export interface NotificationItem {
   id: number;
@@ -302,4 +306,69 @@ export interface NotificationItem {
 export interface NotificationsResponse {
   notifications: NotificationItem[];
   unread: number;
+}
+
+
+export interface Vehicle {
+  id: number;
+  name: string;
+  plate_number: string;
+  vehicle_type: string | null;
+  current_odometer: number;
+  is_active: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VehicleFuelLog {
+  id: number;
+  vehicle_id: number;
+  filled_at: string;
+  odometer: number | null;
+  liters: number | null;
+  price_total: number;
+  station: string | null;
+  notes: string | null;
+  bill_path: string | null;
+  bill_url: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface VehicleMaintenanceLog {
+  id: number;
+  vehicle_id: number;
+  serviced_at: string;
+  odometer: number | null;
+  service_type: string;
+  price_total: number;
+  vendor: string | null;
+  notes: string | null;
+  bill_path: string | null;
+  bill_url: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export type MovementStatus = 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled';
+
+export interface VehicleMovementRequest {
+  id: number;
+  vehicle_id: number;
+  requested_by: string;
+  requester_name?: string | null;
+  reason: string;
+  status: MovementStatus;
+  departure_odometer: number | null;
+  return_odometer: number | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  rejected_reason: string | null;
+  departed_at: string | null;
+  returned_at: string | null;
+  created_at: string;
+  updated_at: string;
+  vehicle_name?: string | null;
+  vehicle_plate?: string | null;
 }

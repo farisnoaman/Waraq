@@ -395,6 +395,8 @@ export const ar: Record<string, string> = {
   "Switch to dark theme": "التبديل إلى الوضع الليلي",
   "Light mode": "الوضع النهاري",
   "Dark mode": "الوضع الليلي",
+  "New inbox message": "رسالة جديدة في الوارد",
+  "Message from {0} ({1}).": "رسالة من {0} ({1}).",
   "Settings": "الإعدادات",
   "Inbox": "الوارد",
   "Profile": "الملف الشخصي",

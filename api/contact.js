@@ -1,6 +1,7 @@
 import supabase from './db-client.js';
 import { createHandler, q, rateLimit, readBody, Reply } from './_lib/http.js';
 import { schemas } from './_lib/schemas.js';
+import { notifyAdmins } from './_lib/workflow.js';
 
 export default createHandler({
   async POST(req) {
@@ -24,6 +25,14 @@ export default createHandler({
         created_at: new Date().toISOString(),
       }),
     );
+    // Tell every administrator a new message is waiting in the Inbox. Never
+    // let a notification problem fail the visitor's submission.
+    await notifyAdmins({
+      type: 'message_new',
+      params: { name: input.name, subject: input.subject },
+    }).catch((err) => {
+      console.warn('[contact] admin notification failed:', err?.message);
+    });
     return new Reply(201, { ok: true });
   },
 });
