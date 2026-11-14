@@ -503,6 +503,7 @@ export const ar: Record<string, string> = {
   "Actions": "الإجراءات",
   "Featured": "مميز",
   "Delete {0}": "حذف {0}",
+  "Delete “{0}”?": "حذف «{0}»؟",
   "Categories": "الفئات",
   "A commission is created automatically for the delivering staff member when an order is delivered, using the MOQ rate tiers from Settings. After you press “Pay commission”, it stays not paid until the staff member confirms they received it.": "تُنشأ العمولة تلقائيًا للموظف الذي نفّذ التوصيل عند تسليم الطلب، وفق شرائح العمولة بحسب الحد الأدنى للطلب المحددة في الإعدادات. بعد الضغط على «دفع العمولة» تبقى غير مدفوعة حتى يؤكد الموظف استلامها.",
   "Your commissions for completed deliveries, calculated from the MOQ rate tiers. When the administrator pays one, confirm that you received it. Until you confirm, it counts as not paid.": "عمولاتك عن عمليات التوصيل المكتملة، محسوبة وفق شرائح الحد الأدنى للطلب. عندما يدفع المدير عمولة، أكّد استلامها. وإلى أن تؤكد تُعدّ غير مدفوعة.",
