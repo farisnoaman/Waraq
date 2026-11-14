@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: <html class="dark"> set by src/lib/theme.ts and the
+   inline script in index.html. Enables the dark: utility variant too. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Readex Pro", ui-sans-serif, system-ui, "Segoe UI", Tahoma, sans-serif;
   --font-display: "Readex Pro", ui-sans-serif, system-ui, "Segoe UI", Tahoma, sans-serif;
@@ -23,6 +27,8 @@
   --color-danger: #b42318;
   /* The lime from the logo mark (the leaf / dark-tile inverse). */
   --color-brand-lime: #d8f26a;
+  /* A light foreground that never flips: text on forest/dark sections. */
+  --color-on-dark: #f6f2e9;
 }
 
 @layer base {
@@ -303,7 +309,7 @@
 
   .btn-dark {
     background-color: var(--color-forest);
-    color: var(--color-paper);
+    color: var(--color-on-dark);
   }
 
   .btn-dark:hover:not(:disabled) {
@@ -581,6 +587,46 @@
   transform: scaleX(-1);
 }
 
+/* ---------------------------------------------------------------------------
+ * Dark theme. The semantic tokens flip under <html class="dark">; brand
+ * accents (primary, brass, lime, forest sections) keep their identity.
+ * ------------------------------------------------------------------------- */
+.dark {
+  --color-paper: #0c1712;
+  --color-paper-deep: #14231c;
+  --color-card: #16261f;
+  --color-ink: #edf2ec;
+  --color-muted: #9fb2a7;
+  --color-line: #24382e;
+  --color-mint: #1b3a2e;
+  /* Reads as a light accent on dark surfaces (text, chips). */
+  --color-primary-strong: #34d399;
+  --color-brass-deep: #e0be72;
+  --color-danger: #f87171;
+}
+
+.dark .bg-white {
+  background-color: var(--color-card);
+}
+
+.dark .field-input {
+  background-color: var(--color-card);
+  color: var(--color-ink);
+}
+
+.dark .field-input::placeholder {
+  color: var(--color-muted);
+}
+
+/* primary-strong becomes light in dark mode; the button hover stays deep. */
+.dark .btn-primary:hover:not(:disabled) {
+  background-color: var(--color-primary);
+}
+
+.dark .skeleton::after {
+  background-image: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.08), transparent);
+}
+
 @keyframes shimmer {
   to {
     transform: translateX(100%);
@@ -614,6 +660,21 @@
   @page {
     size: A4 portrait;
     margin: 10mm;
+  }
+
+  /* Printing is always light, whatever theme is active. */
+  :root,
+  .dark {
+    --color-paper: #ffffff;
+    --color-paper-deep: #f1ede3;
+    --color-card: #ffffff;
+    --color-ink: #0c1f19;
+    --color-muted: #55665e;
+    --color-line: #ddd5c3;
+    --color-mint: #dcece2;
+    --color-primary-strong: #065f46;
+    --color-brass-deep: #6b4f17;
+    --color-danger: #b42318;
   }
 
   html.doc-open #root {

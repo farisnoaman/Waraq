@@ -11,7 +11,17 @@
     <link rel="canonical" href="https://waraq.pro/" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta name="theme-color" content="#04261d" />
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      // Apply the saved theme (or the system one) before first paint.
+      (function () {
+        try {
+          var t = localStorage.getItem('waraqpro.theme.v1');
+          var dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (err) {}
+      })();
+    </script>
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Waraq Pro | ورق برو" />

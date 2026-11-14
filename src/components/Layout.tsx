@@ -12,7 +12,9 @@ import {
   Mail,
   MapPin,
   Menu,
+  Moon,
   ShieldCheck,
+  Sun,
   UserRound,
   WifiOff,
   X,
@@ -37,6 +39,7 @@ import InstallBanner from './InstallBanner';
 import NotificationBell from './NotificationBell';
 import WhatsAppIcon from './WhatsAppIcon';
 import { t, toggleLang, useLang } from '../lib/i18n';
+import { toggleTheme, useTheme } from '../lib/theme';
 
 function InstallButton() {
   const { canPrompt, isInstalled, install } = useInstallPrompt();
@@ -78,7 +81,7 @@ function TopBar() {
   return (
     <aside
       aria-label={t("Contact and account details")}
-      className="on-dark bg-forest text-paper/85 print:hidden"
+      className="on-dark bg-forest text-on-dark/85 print:hidden"
     >
       <div className="container-x flex min-h-9 flex-wrap items-center justify-between gap-x-4 gap-y-1 py-1.5 text-[13px]">
         <p className="flex items-center gap-1.5">
@@ -92,14 +95,14 @@ function TopBar() {
             href={whatsappLink('Hello Waraq Pro, I have an enquiry about your products.')}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 font-medium text-paper transition-colors hover:text-primary-bright"
+            className="inline-flex items-center gap-1.5 font-medium text-on-dark transition-colors hover:text-primary-bright"
           >
             <WhatsAppIcon className="h-3.5 w-3.5 text-brass-soft" />
             <span>{PHONE_DISPLAY}</span>
           </a>
           <a
             href={`mailto:${SITE_EMAIL}`}
-            className="hidden items-center gap-1.5 font-medium text-paper transition-colors hover:text-primary-bright sm:inline-flex"
+            className="hidden items-center gap-1.5 font-medium text-on-dark transition-colors hover:text-primary-bright sm:inline-flex"
           >
             <Mail className="h-3.5 w-3.5 text-brass-soft" aria-hidden="true" />
             <span>{SITE_EMAIL}</span>
@@ -118,7 +121,7 @@ function TopBar() {
               <button
                 type="button"
                 onClick={() => void signOut()}
-                className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2.5 py-0.5 text-xs font-semibold text-paper transition-colors hover:border-danger hover:bg-danger hover:text-white"
+                className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2.5 py-0.5 text-xs font-semibold text-on-dark transition-colors hover:border-danger hover:bg-danger hover:text-white"
               >
                 <LogOut className="h-3 w-3" aria-hidden="true" />
                 {t("Sign out")}
@@ -140,6 +143,7 @@ function TopBar() {
 }
 
 function Header() {
+  const theme = useTheme();
   const [open, setOpen] = useState(false);
   const { count } = useRequestList();
   const { profile, signOut } = useAuth();
@@ -221,6 +225,20 @@ function Header() {
             <Earth className="h-[18px] w-[18px] text-primary" aria-hidden="true" />
             <span lang={lang === 'ar' ? 'en' : 'ar'}>{lang === 'ar' ? 'EN' : 'عربي'}</span>
           </button>
+          {/* Theme toggle: follows the system until the visitor picks one. */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? t("Switch to light theme") : t("Switch to dark theme")}
+            title={theme === 'dark' ? t("Switch to light theme") : t("Switch to dark theme")}
+            className="hidden h-11 shrink-0 items-center gap-1.5 rounded-full border border-line px-3 text-sm font-semibold text-ink transition-colors hover:bg-paper-deep sm:inline-flex"
+          >
+            {theme === 'dark' ? (
+              <Sun className="h-[18px] w-[18px] text-primary" aria-hidden="true" />
+            ) : (
+              <Moon className="h-[18px] w-[18px] text-primary" aria-hidden="true" />
+            )}
+          </button>
           <Link
             to="/request"
             className="btn btn-primary px-2.5 sm:px-5"
@@ -301,6 +319,27 @@ function Header() {
                 </button>
               </li>
               <li className="border-b border-line last:border-b-0">
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="flex min-h-14 w-full items-center justify-between text-ink"
+                >
+                  <span className="flex items-center gap-3">
+                    {theme === 'dark' ? (
+                      <Sun className="h-5 w-5 text-primary" aria-hidden="true" />
+                    ) : (
+                      <Moon className="h-5 w-5 text-primary" aria-hidden="true" />
+                    )}
+                    <span className="font-display text-2xl">
+                      {theme === 'dark' ? t("Light mode") : t("Dark mode")}
+                    </span>
+                  </span>
+                  <span className="text-base font-semibold text-primary-strong">
+                    {theme === 'dark' ? t("Light mode") : t("Dark mode")}
+                  </span>
+                </button>
+              </li>
+              <li className="border-b border-line last:border-b-0">
                 {profile ? (
                   <button
                     type="button"
@@ -342,11 +381,11 @@ function Footer() {
     { to: '/login', label: 'Account sign in' },
   ];
   return (
-    <footer className="on-dark bg-forest text-paper print:hidden">
+    <footer className="on-dark bg-forest text-on-dark print:hidden">
       <div className="container-x grid gap-12 py-16 md:grid-cols-12">
         <div className="md:col-span-5">
           <Logo tone="dark" large />
-          <p className="mt-5 max-w-sm text-paper/70">
+          <p className="mt-5 max-w-sm text-on-dark/70">
             {t("Waraq Pro (")}{SITE_DOMAIN}{t(") is a Riyadh-based supply company established in 2015. Paper, packaging and office products, from your request to delivery at your door.")}
           </p>
         </div>
@@ -357,7 +396,7 @@ function Footer() {
               <li key={link.to}>
                 <Link
                   to={link.to}
-                  className="inline-flex min-h-10 items-center text-paper/85 transition-colors hover:text-primary-bright"
+                  className="inline-flex min-h-10 items-center text-on-dark/85 transition-colors hover:text-primary-bright"
                 >
                   {t(link.label)}
                 </Link>
@@ -371,7 +410,7 @@ function Footer() {
             <li>
               <a
                 href={`mailto:${SITE_EMAIL}`}
-                className="inline-flex items-center gap-3 font-display text-2xl text-paper transition-colors hover:text-primary-bright"
+                className="inline-flex items-center gap-3 font-display text-2xl text-on-dark transition-colors hover:text-primary-bright"
               >
                 <Mail className="h-5 w-5 text-brass-soft" aria-hidden="true" />
                 {SITE_EMAIL}
@@ -382,7 +421,7 @@ function Footer() {
                 href={whatsappLink('Hello Waraq Pro, I would like to enquire about your products.')}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-3 font-display text-2xl text-paper transition-colors hover:text-primary-bright"
+                className="inline-flex items-center gap-3 font-display text-2xl text-on-dark transition-colors hover:text-primary-bright"
               >
                 <WhatsAppIcon className="h-5 w-5 text-[#25D366]" />
                 {PHONE_DISPLAY}
@@ -393,17 +432,17 @@ function Footer() {
                 href={SITE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-3 text-paper/85 transition-colors hover:text-primary-bright"
+                className="inline-flex items-center gap-3 text-on-dark/85 transition-colors hover:text-primary-bright"
               >
                 <Globe className="h-5 w-5 shrink-0 text-brass-soft" aria-hidden="true" />
                 {SITE_WWW}
               </a>
             </li>
-            <li className="flex items-start gap-3 text-paper/85">
+            <li className="flex items-start gap-3 text-on-dark/85">
               <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-brass-soft" aria-hidden="true" />
               <span>
                 {siteAddress(lang)}
-                <span className="mt-1 block text-sm text-paper/60">
+                <span className="mt-1 block text-sm text-on-dark/60">
                   {t("Postal code")}{' '}{SITE_POSTAL_CODE} · {t("Short address")}{' '}{SITE_SHORT_ADDRESS}
                 </span>
               </span>
@@ -412,7 +451,7 @@ function Footer() {
         </div>
       </div>
       <div className="border-t border-white/10">
-        <div className="container-x flex flex-col gap-2 py-6 pe-20 text-sm text-paper/60 sm:flex-row sm:items-center sm:justify-between sm:pe-56">
+        <div className="container-x flex flex-col gap-2 py-6 pe-20 text-sm text-on-dark/60 sm:flex-row sm:items-center sm:justify-between sm:pe-56">
           <p>
             © {year}{' '}{t("Waraq Pro (")}{SITE_DOMAIN}{t("). All rights reserved.")}
           </p>
@@ -439,7 +478,7 @@ function Toast() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             transition={{ duration: 0.22 }}
-            className="on-dark pointer-events-auto flex max-w-md items-center gap-3 rounded-2xl bg-forest py-3 ps-4 pe-3 text-[15px] text-paper shadow-[0_18px_40px_-16px_rgba(0,0,0,0.5)]"
+            className="on-dark pointer-events-auto flex max-w-md items-center gap-3 rounded-2xl bg-forest py-3 ps-4 pe-3 text-[15px] text-on-dark shadow-[0_18px_40px_-16px_rgba(0,0,0,0.5)]"
           >
             <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary-bright text-forest">
               <Check className="h-4 w-4" aria-hidden="true" />
@@ -501,7 +540,7 @@ function IdleWarning() {
         role="alertdialog"
         aria-labelledby="idle-title"
         aria-describedby="idle-text"
-        className="on-dark flex w-full max-w-lg flex-col gap-4 rounded-2xl bg-forest p-5 text-paper shadow-[0_24px_50px_-18px_rgba(0,0,0,0.6)] sm:flex-row sm:items-center"
+        className="on-dark flex w-full max-w-lg flex-col gap-4 rounded-2xl bg-forest p-5 text-on-dark shadow-[0_24px_50px_-18px_rgba(0,0,0,0.6)] sm:flex-row sm:items-center"
       >
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brass/25 text-brass-soft">
           <Clock className="h-5 w-5" aria-hidden="true" />
@@ -510,9 +549,9 @@ function IdleWarning() {
           <p id="idle-title" className="font-semibold">
             {t("Still there?")}
           </p>
-          <p id="idle-text" className="text-sm text-paper/75">
+          <p id="idle-text" className="text-sm text-on-dark/75">
             {t("You will be signed out in")}{' '}
-            <span className="font-semibold tabular-nums text-paper">{idleSecondsLeft} {t('sec')}</span>{' '}{t("because there has been no activity.")}
+            <span className="font-semibold tabular-nums text-on-dark">{idleSecondsLeft} {t('sec')}</span>{' '}{t("because there has been no activity.")}
           </p>
         </div>
         <div className="flex shrink-0 gap-2">
