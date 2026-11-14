@@ -280,6 +280,7 @@ export const ar: Record<string, string> = {
   "Remove": "إزالة",
   "Quantity": "الكمية",
   "· minimum": "· الحد الأدنى",
+  "minimum": "الحد الأدنى",
   "Add to request list": "أضف إلى قائمة الطلب",
   "Ask on WhatsApp (": "اسأل عبر واتساب (",
   "Prices exclude VAT. VAT is shown for every item on your order bill.": "الأسعار غير شاملة ضريبة القيمة المضافة. تظهر الضريبة لكل صنف في فاتورة طلبك.",

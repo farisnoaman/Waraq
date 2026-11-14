@@ -305,8 +305,8 @@ export default function ProductDetail() {
                     <span className="font-normal text-muted">
                       (
                       {unitType === 'carton'
-                        ? `${t("minimum")}{' '}${minQty} ${t("cartons")} · ${minQty * unitsPerCarton} ${t("units")}`
-                        : `${t(product.pack_unit)} · ${t("minimum")}{' '}${minQty}`}
+                        ? `${t("minimum")} ${minQty} ${t("cartons")} · ${minQty * unitsPerCarton} ${t("units")}`
+                        : `${t(product.pack_unit)} · ${t("minimum")} ${minQty}`}
                       )
                     </span>
                   </p>
