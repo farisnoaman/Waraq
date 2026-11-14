@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Search, ShieldCheck, UserCog, UserPlus, Users } from 'lucide-react';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import { Alert, Badge, ErrorPanel, Spinner, TextField } from '../../components/ui';
 import { api, ApiError, errorMessage } from '../../lib/api';
 import { formatDate, ROLE_LABEL, ROLE_TONE,  ltr } from '../../lib/format';
@@ -18,6 +19,7 @@ export default function UsersTab({ me }: { me: Profile }) {
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [created, setCreated] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<null | { user: Profile; role: 'buyer' | 'staff' }>(null);
 
   const load = useCallback(async () => {
     try {
@@ -67,10 +69,19 @@ export default function UsersTab({ me }: { me: Profile }) {
     }
   };
 
-  const setRole = (user: Profile, role: 'buyer' | 'staff') =>
-    action.run(`role-${user.id}`, () =>
-      api('/api/operations?resource=users', { method: 'PUT', body: { id: user.id, role } }),
+  const setRole = (user: Profile, role: 'buyer' | 'staff') => {
+    setConfirm({ user, role });
+  };
+
+  const performRoleChange = async () => {
+    if (!confirm) return;
+    await action.run(`role-${confirm.user.id}`, () =>
+      api('/api/operations?resource=users', {
+        method: 'PUT',
+        body: { id: confirm.user.id, role: confirm.role },
+      }),
     );
+  };
 
   const needle = query.trim().toLowerCase();
   const visible = users.filter(
@@ -82,6 +93,26 @@ export default function UsersTab({ me }: { me: Profile }) {
 
   return (
     <div>
+      <ConfirmDialog
+        request={
+          confirm
+            ? {
+                title: t("Confirm role change"),
+                changes: [
+                  {
+                    label: confirm.user.full_name,
+                    from: t(ROLE_LABEL[confirm.user.role]),
+                    to: t(ROLE_LABEL[confirm.role]),
+                  },
+                ],
+                tone: 'primary',
+                confirmLabel: t("Confirm"),
+                onConfirm: () => void performRoleChange(),
+              }
+            : null
+        }
+        onClose={() => setConfirm(null)}
+      />
       <TabIntro title={t("Users and staff")}>
         {t("Everyone who signs in with Google or email starts as a buyer. Assign a signed-in user as staff to give them the staff portal, or create a dedicated staff account below.")}
       </TabIntro>
@@ -233,7 +264,7 @@ export default function UsersTab({ me }: { me: Profile }) {
                           type="button"
                           className="btn btn-primary btn-sm"
                           disabled={action.busy !== null}
-                          onClick={() => void setRole(user, 'staff')}
+                          onClick={() => setRole(user, 'staff')}
                         >
                           {action.busy === `role-${user.id}` ? (
                             <Spinner />
@@ -247,7 +278,7 @@ export default function UsersTab({ me }: { me: Profile }) {
                           type="button"
                           className="btn btn-outline btn-sm"
                           disabled={action.busy !== null}
-                          onClick={() => void setRole(user, 'buyer')}
+                          onClick={() => setRole(user, 'buyer')}
                         >
                           {action.busy === `role-${user.id}` && <Spinner />}
                           {t("Set as buyer")}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Tags, Pencil, Plus, Search, Trash2, Power, CalendarClock, X } from 'lucide-react';
 import ResponsiveTable, { type ResponsiveColumn } from '../../components/ResponsiveTable';
+import ConfirmDialog, { type ConfirmChange, type ConfirmRequest } from '../../components/ConfirmDialog';
 import { Alert, Badge, ErrorPanel, SelectField, Spinner, TextAreaField, TextField } from '../../components/ui';
 import { api, errorMessage, useApi } from '../../lib/api';
 import { formatDateTime, sar } from '../../lib/format';
@@ -76,6 +77,7 @@ export default function PromotionsTab(_props: OpsProps) {
   const [form, setForm] = useState<(FormState & { id: number | null }) | null>(null);
   const [errors, setErrors] = useState<FormStateErrors>({});
   const [notice, setNotice] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [productQuery, setProductQuery] = useState('');
   const products = useApi<{ id: number; name: string; sku: string }[]>('/api/products');
 
@@ -138,24 +140,65 @@ export default function PromotionsTab(_props: OpsProps) {
       setErrors(result.errors as FormStateErrors);
       return;
     }
-    const ok = await action.run('save', async () => {
-      try {
-        if (form.id) {
-          await api('/api/promotions', { method: 'PUT', body: { ...result.data, id: form.id } });
-          setNotice(t("Promotion updated."));
-        } else {
-          await api('/api/promotions', { method: 'POST', body: result.data });
-          setNotice(t("Promotion created."));
+    const row = form.id ? rows.find((r) => r.id === form.id) : undefined;
+
+    const performSave = async () => {
+      const ok = await action.run('save', async () => {
+        try {
+          if (form.id) {
+            await api('/api/promotions', { method: 'PUT', body: { ...result.data, id: form.id } });
+            setNotice(t("Promotion updated."));
+          } else {
+            await api('/api/promotions', { method: 'POST', body: result.data });
+            setNotice(t("Promotion created."));
+          }
+          setForm(null);
+        } catch (err) {
+          if (typeof err === 'object' && err !== null && 'fields' in err) {
+            setErrors((err as { fields: FormStateErrors }).fields);
+          }
+          throw err;
         }
-        setForm(null);
-      } catch (err) {
-        if (typeof err === 'object' && err !== null && 'fields' in err) {
-          setErrors((err as { fields: FormStateErrors }).fields);
-        }
-        throw err;
+      });
+      return ok;
+    };
+
+    // Editing an existing promotion: preview exactly what will change first.
+    if (row) {
+      const changes: ConfirmChange[] = [];
+      const push = (label: string, from: string, to: string) => {
+        if (from !== to) changes.push({ label, from, to });
+      };
+      push(t("Name"), row.name, form.name);
+      push(
+        t("Discount"),
+        row.discount_type === 'percentage' ? `${row.discount_value}%` : sar(row.discount_value),
+        form.discount_type === 'percentage' ? `${form.discount_value}%` : sar(Number(form.discount_value)),
+      );
+      push(
+        t("Threshold"),
+        thresholdLabel(row),
+        form.threshold_type === 'order_total'
+          ? t("Order total ≥ {0}", [sar(Number(form.threshold_value))])
+          : form.threshold_type === 'total_units'
+            ? t("Total units ≥ {0}", [form.threshold_value])
+            : t("Total cartons ≥ {0}", [form.threshold_value]),
+      );
+      push(t("From"), formatDateTime(row.starts_at), formatDateTime(form.starts_at));
+      push(t("Until"), formatDateTime(row.expires_at), formatDateTime(form.expires_at));
+
+      if (changes.length > 0) {
+        setConfirm({
+          title: t("Confirm changes"),
+          tone: 'primary',
+          confirmLabel: t("Save changes"),
+          changes,
+          onConfirm: () => void performSave(),
+        });
+        return;
       }
-    });
-    if (!ok) return;
+    }
+    await performSave();
   };
 
   const toggleProduct = (productId: number) => {
@@ -188,13 +231,20 @@ export default function PromotionsTab(_props: OpsProps) {
     );
   };
 
-  const remove = async (promo: Promotion) => {
-    if (!window.confirm(t("Delete “{0}”? This cannot be undone.", [promo.name]))) return;
+  const remove = (promo: Promotion) => {
     setNotice(null);
-    await action.run(`delete-${promo.id}`, () =>
-      api('/api/promotions', { method: 'DELETE', body: { id: promo.id } }),
-    );
-    setForm(null);
+    setConfirm({
+      title: t("Delete “{0}”?", [promo.name]),
+      message: t("This cannot be undone."),
+      tone: 'danger',
+      confirmLabel: t("Delete"),
+      onConfirm: async () => {
+        await action.run(`delete-${promo.id}`, () =>
+          api('/api/promotions', { method: 'DELETE', body: { id: promo.id } }),
+        );
+        setForm(null);
+      },
+    });
   };
 
   const activeRows = useMemo(
@@ -321,7 +371,7 @@ export default function PromotionsTab(_props: OpsProps) {
         type="button"
         className="btn btn-danger btn-sm"
         disabled={action.busy !== null}
-        onClick={() => void remove(promo)}
+        onClick={() => remove(promo)}
       >
         <Trash2 className="h-4 w-4" aria-hidden="true" />
         {t("Delete")}
@@ -331,6 +381,7 @@ export default function PromotionsTab(_props: OpsProps) {
 
   return (
     <div>
+      <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <TabIntro title={t("Promotions")}>
           {t("Discounts applied automatically at order time: percentage or fixed amount, unlocked when the order reaches a threshold. Active promotions run on their schedule; deactivated and expired ones wait in the second tab until you reactivate them.")}

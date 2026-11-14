@@ -13,6 +13,7 @@ import {
 } from '../../components/ui';
 import { api, ApiError, errorMessage, invalidate, useApi } from '../../lib/api';
 import ResponsiveTable from '../../components/ResponsiveTable';
+import ConfirmDialog, { type ConfirmChange, type ConfirmRequest } from '../../components/ConfirmDialog';
 import ProductImagePicker from '../../components/ProductImagePicker';
 import { percent, sar } from '../../lib/format';
 import type { Category, Product, Spec } from '../../lib/types';
@@ -116,6 +117,38 @@ const toLocalInput = (iso: string) => {
   return `${d.getFullYear()}-${padLocal(d.getMonth() + 1)}-${padLocal(d.getDate())}T${padLocal(d.getHours())}:${padLocal(d.getMinutes())}`;
 };
 
+/** Field-by-field diff of a product edit, shown in the confirmation dialog. */
+function productChanges(original: Product, data: Record<string, unknown>): ConfirmChange[] {
+  const rows: [string, unknown, unknown][] = [
+    [t("Product name"), original.name, data.name],
+    [t("SKU code"), original.sku, data.sku],
+    [t("Unit price excl. VAT (SAR)"), original.unit_price, data.unit_price],
+    [t("Carton price excl. VAT (SAR)"), original.carton_price, data.carton_price],
+    [t("Units per carton"), original.units_per_carton, data.units_per_carton],
+    [t("Minimum sell price (SAR)"), original.min_sell_price, data.min_sell_price],
+    [t("Cost price (SAR) — internal"), original.cost_price, data.cost_price],
+    [t("Minimum order quantity (MOQ)"), original.moq, data.moq],
+    [t("In stock"), original.in_stock ? t("Yes") : t("No"), data.in_stock ? t("Yes") : t("No")],
+    [t("Featured"), original.featured ? t("Yes") : t("No"), data.featured ? t("Yes") : t("No")],
+  ];
+  return rows
+    .filter(([, from, to]) => String(from) !== String(to))
+    .map(([label, from, to]) => ({ label, from: String(from), to: String(to) }));
+}
+
+/** Field-by-field diff of a category edit. */
+function categoryChanges(original: Category, data: Record<string, unknown>): ConfirmChange[] {
+  const rows: [string, unknown, unknown][] = [
+    [t("Category name"), original.name, data.name],
+    [t("Category type"), original.kind === 'product' ? t("Product category") : t("Project category"), data.kind === 'product' ? t("Product category") : t("Project category")],
+    [t("Sort order"), original.sort_order, data.sort_order],
+    [t("Description"), original.description ?? '—', data.description || '—'],
+  ];
+  return rows
+    .filter(([, from, to]) => String(from) !== String(to))
+    .map(([label, from, to]) => ({ label, from: String(from), to: String(to) }));
+}
+
 function toForm(product: Product): ProductForm {
   return {
     id: product.id,
@@ -170,6 +203,7 @@ export default function CatalogTab() {
   const [failure, setFailure] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
 
   const allCategories = useMemo(
@@ -237,6 +271,25 @@ export default function CatalogTab() {
     setCategoryForm(form);
   };
 
+  const performProductSave = async (data: Record<string, unknown>, id: number | null) => {
+    setSaving(true);
+    try {
+      await api('/api/products', {
+        method: id ? 'PUT' : 'POST',
+        body: id ? { ...data, id } : data,
+      });
+      invalidate('/api/products');
+      void reloadProducts();
+      setNotice(t("{0} has been {1}.", [String(data.name), id ? t("updated") : t("added to the catalogue")]));
+      setProductForm(null);
+    } catch (err) {
+      if (err instanceof ApiError) setErrors(err.fields);
+      setFailure(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const saveProduct = async (event: FormEvent) => {
     event.preventDefault();
     if (!productForm || saving) return;
@@ -249,16 +302,33 @@ export default function CatalogTab() {
       return;
     }
     setErrors({});
+    const original = productForm.id ? (products ?? []).find((p) => p.id === productForm.id) : undefined;
+    const changes = original ? productChanges(original, result.data as Record<string, unknown>) : [];
+    if (original && changes.length > 0) {
+      // Editing an existing product: show exactly what will change first.
+      setConfirm({
+        title: t("Confirm changes"),
+        tone: 'primary',
+        confirmLabel: t("Save changes"),
+        changes,
+        onConfirm: () => void performProductSave(result.data as Record<string, unknown>, productForm.id),
+      });
+      return;
+    }
+    await performProductSave(result.data as Record<string, unknown>, productForm.id ?? null);
+  };
+
+  const performCategorySave = async (data: Record<string, unknown>, id: number | null) => {
     setSaving(true);
     try {
-      await api('/api/products', {
-        method: productForm.id ? 'PUT' : 'POST',
-        body: productForm.id ? { ...result.data, id: productForm.id } : result.data,
+      await api('/api/categories', {
+        method: id ? 'PUT' : 'POST',
+        body: id ? { ...data, id } : data,
       });
+      invalidate('/api/categories');
       invalidate('/api/products');
-      void reloadProducts();
-      setNotice(t("{0} has been {1}.", [result.data.name, productForm.id ? t("updated") : t("added to the catalogue")]));
-      setProductForm(null);
+      setNotice(t("{0} has been {1}.", [String(data.name), id ? t("updated") : t("added")]));
+      setCategoryForm(null);
     } catch (err) {
       if (err instanceof ApiError) setErrors(err.fields);
       setFailure(errorMessage(err));
@@ -278,40 +348,44 @@ export default function CatalogTab() {
       return;
     }
     setErrors({});
-    setSaving(true);
-    try {
-      await api('/api/categories', {
-        method: categoryForm.id ? 'PUT' : 'POST',
-        body: categoryForm.id ? { ...result.data, id: categoryForm.id } : result.data,
+    const original = categoryForm.id ? allCategories.find((c) => c.id === categoryForm.id) : undefined;
+    const changes = original ? categoryChanges(original, result.data as Record<string, unknown>) : [];
+    if (original && changes.length > 0) {
+      setConfirm({
+        title: t("Confirm changes"),
+        tone: 'primary',
+        confirmLabel: t("Save changes"),
+        changes,
+        onConfirm: () => void performCategorySave(result.data as Record<string, unknown>, categoryForm.id),
       });
-      invalidate('/api/categories');
-      invalidate('/api/products');
-      setNotice(t("{0} has been {1}.", [result.data.name, categoryForm.id ? t("updated") : t("added")]));
-      setCategoryForm(null);
-    } catch (err) {
-      if (err instanceof ApiError) setErrors(err.fields);
-      setFailure(errorMessage(err));
-    } finally {
-      setSaving(false);
+      return;
     }
+    await performCategorySave(result.data as Record<string, unknown>, categoryForm.id ?? null);
   };
 
-  const remove = async (kind: 'products' | 'categories', id: number, name: string) => {
-    if (!window.confirm(t("Delete “{0}”? This cannot be undone.", [name]))) return;
-    setDeleting(`${kind}-${id}`);
-    setFailure(null);
-    setNotice(null);
-    try {
-      await api(`/api/${kind}`, { method: 'DELETE', body: { id } });
-      invalidate('/api/products');
-      invalidate('/api/categories');
-      void reloadProducts();
-      setNotice(t("{0} has been deleted.", [name]));
-    } catch (err) {
-      setFailure(errorMessage(err));
-    } finally {
-      setDeleting(null);
-    }
+  const remove = (kind: 'products' | 'categories', id: number, name: string) => {
+    setConfirm({
+      title: t("Delete “{0}”?", [name]),
+      message: t("This cannot be undone."),
+      tone: 'danger',
+      confirmLabel: t("Delete"),
+      onConfirm: async () => {
+        setDeleting(`${kind}-${id}`);
+        setFailure(null);
+        setNotice(null);
+        try {
+          await api(`/api/${kind}`, { method: 'DELETE', body: { id } });
+          invalidate('/api/products');
+          invalidate('/api/categories');
+          void reloadProducts();
+          setNotice(t("{0} has been deleted.", [name]));
+        } catch (err) {
+          setFailure(errorMessage(err));
+        } finally {
+          setDeleting(null);
+        }
+      },
+    });
   };
 
   const setP = <K extends keyof ProductForm>(key: K, value: ProductForm[K]) => {
@@ -328,6 +402,7 @@ export default function CatalogTab() {
 
   return (
     <div>
+      <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
       <TabIntro title={t("Catalog and MOQ")}>
         {t("Manage products, their minimum order quantity (MOQ), prices and categories. Changes appear on the public catalogue straight away.")}
       </TabIntro>
@@ -904,7 +979,7 @@ export default function CatalogTab() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => void remove('products', product.id, product.name)}
+                      onClick={() => remove('products', product.id, product.name)}
                       disabled={deleting !== null}
                       aria-label={t("Delete {0}", [product.name])}
                       className="grid h-10 w-10 place-items-center rounded-full text-muted hover:bg-danger/10 hover:text-danger disabled:opacity-50"
@@ -965,7 +1040,7 @@ export default function CatalogTab() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => void remove('categories', category.id, category.name)}
+                      onClick={() => remove('categories', category.id, category.name)}
                       disabled={deleting !== null}
                       aria-label={t("Delete {0}", [category.name])}
                       className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted hover:bg-danger/10 hover:text-danger disabled:opacity-50"

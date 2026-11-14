@@ -10,6 +10,7 @@ import {
   Truck,
 } from 'lucide-react';
 import DocumentModal from '../../components/DocumentModal';
+import ConfirmDialog, { type ConfirmRequest } from '../../components/ConfirmDialog';
 import { OrderItemsTable, OrderSummary } from '../../components/OrderBreakdown';
 import { Alert, Badge, Spinner } from '../../components/ui';
 import { api } from '../../lib/api';
@@ -37,6 +38,7 @@ function PriceEditor({ order, reload }: { order: Order; reload: () => Promise<vo
   const action = useAction(reload);
   const [floors, setFloors] = useState<Record<number, number | null>>({});
   const [drafts, setDrafts] = useState<Record<number, string>>({});
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
 
   // The floors come from the products the admin token can see.
   useEffect(() => {
@@ -71,7 +73,9 @@ function PriceEditor({ order, reload }: { order: Order; reload: () => Promise<vo
     (item) => Number(drafts[item.id] ?? item.unit_price) !== Number(item.unit_price),
   );
 
-  const save = async () => {
+  const save = () => {
+    const pending: { item: OrderItem; value: number }[] = [];
+    const changes: { label: string; from: string; to: string }[] = [];
     for (const item of changed) {
       const value = Number(drafts[item.id]);
       const list = listPriceOf(item);
@@ -82,19 +86,34 @@ function PriceEditor({ order, reload }: { order: Order; reload: () => Promise<vo
         );
         return;
       }
+      pending.push({ item, value });
+      changes.push({
+        label: `${t(item.product_name)} · ${item.qty} ${unitLabel(item)}`,
+        from: sar(Number(item.unit_price)),
+        to: sar(value),
+      });
     }
-    await action.run('save-prices', async () => {
-      for (const item of changed) {
-        await api('/api/orders', {
-          method: 'PUT',
-          body: {
-            id: order.id,
-            action: 'set_item_price',
-            item_id: item.id,
-            unit_price: Number(drafts[item.id]),
-          },
+    if (!pending.length) return;
+    setConfirm({
+      title: t("Confirm price changes"),
+      tone: 'primary',
+      confirmLabel: t("Save prices"),
+      changes,
+      onConfirm: async () => {
+        await action.run('save-prices', async () => {
+          for (const { item, value } of pending) {
+            await api('/api/orders', {
+              method: 'PUT',
+              body: {
+                id: order.id,
+                action: 'set_item_price',
+                item_id: item.id,
+                unit_price: value,
+              },
+            });
+          }
         });
-      }
+      },
     });
   };
 
@@ -155,11 +174,12 @@ function PriceEditor({ order, reload }: { order: Order; reload: () => Promise<vo
         type="button"
         className="btn btn-primary btn-sm mt-3"
         disabled={action.busy !== null || changed.length === 0}
-        onClick={() => void save()}
+        onClick={save}
       >
         {action.busy === 'save-prices' && <Spinner />}
         {t("Save prices")}
       </button>
+      <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
     </div>
   );
 }

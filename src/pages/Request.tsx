@@ -10,6 +10,7 @@ import {
   Send,
   Trash2,
 } from 'lucide-react';
+import ConfirmDialog, { type ConfirmRequest } from '../components/ConfirmDialog';
 import DocumentModal from '../components/DocumentModal';
 import WhatsAppIcon from '../components/WhatsAppIcon';
 import { OrderItemsTable, OrderSummary } from '../components/OrderBreakdown';
@@ -59,6 +60,7 @@ export default function RequestPage() {
   const [failure, setFailure] = useState<string | null>(null);
   const [placed, setPlaced] = useState<PlacedOrder | null>(null);
   const [showBill, setShowBill] = useState(false);
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
 
   // Prefill from the signed-in profile without overwriting what was typed.
   useEffect(() => {
@@ -272,6 +274,7 @@ export default function RequestPage() {
         title={t("Your request list and order bill")}
         description={t("Check the quantities, review the VAT breakdown for each item, and place your order. It appears in your buyer portal straight away.")}
       />
+      <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
 
       <section className="container-x grid gap-10 py-10 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:py-14">
         <div>
@@ -282,7 +285,15 @@ export default function RequestPage() {
             {rows.length > 0 && (
               <button
                 type="button"
-                onClick={clear}
+                onClick={() =>
+                  setConfirm({
+                    title: t("Clear list"),
+                    message: t("This cannot be undone."),
+                    tone: 'danger',
+                    confirmLabel: t("Clear list"),
+                    onConfirm: clear,
+                  })
+                }
                 className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-muted transition-colors hover:bg-paper-deep hover:text-danger"
               >
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -379,7 +390,17 @@ export default function RequestPage() {
                               />
                               <button
                                 type="button"
-                                onClick={() => remove(product.id, line.unitType)}
+                                onClick={() =>
+                                  setConfirm({
+                                    title: t("Remove {0} from request list", [product.name]),
+                                    message: byCarton
+                                      ? `${line.qty} ${t("cartons")}`
+                                      : `${line.qty} ${t("units")}`,
+                                    tone: 'danger',
+                                    confirmLabel: t("Remove"),
+                                    onConfirm: () => remove(product.id, line.unitType),
+                                  })
+                                }
                                 aria-label={t("Remove {0} from request list", [product.name])}
                                 className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-paper-deep hover:text-danger"
                               >

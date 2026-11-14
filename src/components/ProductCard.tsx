@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, ChevronRight, Plus } from 'lucide-react';
+import ConfirmDialog from './ConfirmDialog';
 import { useRequestList } from '../contexts/RequestListContext';
 import type { Product, UnitType } from '../lib/types';
 import QtyStepper from './QtyStepper';
@@ -26,6 +27,7 @@ export default function ProductCard({ product, categoryName, projectCategoryName
   const { add, setQty, remove, qtyOf } = useRequestList();
   const hasCarton = product.carton_price != null && product.units_per_carton != null;
   const [unitType, setUnitType] = useState<UnitType>('unit');
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const qty = qtyOf(product.id, unitType);
   const minQty = minQtyFor(product, unitType);
   const href = `/products/${product.slug}`;
@@ -144,7 +146,7 @@ export default function ProductCard({ product, categoryName, projectCategoryName
                 </span>
                 <button
                   type="button"
-                  onClick={() => remove(product.id, unitType)}
+                  onClick={() => setConfirmRemove(true)}
                   className="inline-flex min-h-9 items-center rounded-full px-2 text-xs font-semibold text-muted transition-colors hover:bg-paper-deep hover:text-danger"
                 >
                   {t("Remove")}
@@ -172,6 +174,19 @@ export default function ProductCard({ product, categoryName, projectCategoryName
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        request={
+          confirmRemove
+            ? {
+                title: t("Remove {0} from request list", [product.name]),
+                tone: 'danger',
+                confirmLabel: t("Remove"),
+                onConfirm: () => remove(product.id, unitType),
+              }
+            : null
+        }
+        onClose={() => setConfirmRemove(false)}
+      />
     </article>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Check, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
+import ConfirmDialog from '../components/ConfirmDialog';
 import QtyStepper from '../components/QtyStepper';
 import WhatsAppIcon from '../components/WhatsAppIcon';
 import { ErrorPanel, StockBadge, usePageTitle } from '../components/ui';
@@ -55,6 +56,7 @@ export default function ProductDetail() {
   const minQty =
     unitType === 'carton' && product ? Math.max(1, Math.ceil(moq / unitsPerCarton)) : moq;
   const [draftQty, setDraftQty] = useState(moq);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   useEffect(() => {
     setDraftQty(minQty);
   }, [slug, minQty]);
@@ -290,13 +292,26 @@ export default function ProductDetail() {
                     </Link>
                     <button
                       type="button"
-                      onClick={() => remove(product.id, unitType)}
+                      onClick={() => setConfirmRemove(true)}
                       className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-muted transition-colors hover:bg-paper-deep hover:text-danger"
                     >
                       <Trash2 className="h-4 w-4" aria-hidden="true" />
                       {t("Remove")}
                     </button>
                   </div>
+                  <ConfirmDialog
+                    request={
+                      confirmRemove
+                        ? {
+                            title: t("Remove {0} from request list", [product.name]),
+                            tone: 'danger',
+                            confirmLabel: t("Remove"),
+                            onConfirm: () => remove(product.id, unitType),
+                          }
+                        : null
+                    }
+                    onClose={() => setConfirmRemove(false)}
+                  />
                 </>
               ) : (
                 <>
