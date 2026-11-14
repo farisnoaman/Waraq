@@ -382,6 +382,7 @@ export const ar: Record<string, string> = {
   "Commissions": "العمولات",
   "Users & staff": "المستخدمون والموظفون",
   "Users": "المستخدمون",
+  "Discount {0}": "خصم {0}",
   "Settings": "الإعدادات",
   "Inbox": "الوارد",
   "Profile": "الملف الشخصي",

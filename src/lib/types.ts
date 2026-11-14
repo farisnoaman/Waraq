@@ -56,6 +56,12 @@ export interface Product {
   cost_price?: number | null;
   /** Display metadata: when the current prices take effect. */
   price_effective_from: string | null;
+  /** Best active promotion covering this product (badge on the catalogue). */
+  promotion: {
+    name: string;
+    discount_type: DiscountType;
+    discount_value: number;
+  } | null;
   in_stock: boolean;
   featured: boolean;
   image: string;

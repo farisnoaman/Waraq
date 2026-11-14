@@ -2,7 +2,7 @@ import supabase from './db-client.js';
 import { createHandler, HttpError, q, readBody, Reply } from './_lib/http.js';
 import { getAuth, requireRole } from './_lib/auth.js';
 import { schemas } from './_lib/schemas.js';
-import { getSettings, round2 } from './_lib/workflow.js';
+import { getSettings, nowIso, round2 } from './_lib/workflow.js';
 
 function slugify(value) {
   return (
@@ -15,12 +15,34 @@ function slugify(value) {
   );
 }
 
+/** The biggest active promotion covering this product, for the badge. */
+function bestPromotionFor(product, promotions, nowMs) {
+  let best = null;
+  let bestAmount = 0;
+  for (const promo of promotions) {
+    if (new Date(promo.starts_at).getTime() > nowMs || new Date(promo.expires_at).getTime() < nowMs) {
+      continue;
+    }
+    const scope = Array.isArray(promo.applies_to) ? promo.applies_to.map((v) => Number(v)) : [];
+    if (scope.length && !scope.includes(product.id)) continue;
+    const amount =
+      promo.discount_type === 'percentage'
+        ? round2((product.unit_price * Number(promo.discount_value)) / 100)
+        : round2(Math.min(Number(promo.discount_value), product.price_incl_vat ?? product.unit_price));
+    if (amount > bestAmount) {
+      bestAmount = amount;
+      best = promo;
+    }
+  }
+  return best;
+}
+
 /**
  * Adds category slugs and the effective VAT (own rate, or the default from
  * Settings). Fields are picked explicitly so `cost_price` can never leak to a
  * non-admin caller, whatever columns exist on the table.
  */
-function present(product, categoryById, defaultVat, includeCost = false) {
+function present(product, categoryById, defaultVat, includeCost = false, promotion = null) {
   const unit = round2(product.unit_price);
   const override = product.vat_rate == null ? null : Number(product.vat_rate);
   const rate = override == null ? defaultVat : override;
@@ -55,6 +77,13 @@ function present(product, categoryById, defaultVat, includeCost = false) {
     carton_price: product.carton_price == null ? null : round2(product.carton_price),
     min_sell_price: product.min_sell_price == null ? null : round2(product.min_sell_price),
     price_effective_from: product.price_effective_from ?? null,
+    promotion: promotion
+      ? {
+          name: promotion.name,
+          discount_type: promotion.discount_type,
+          discount_value: Number(promotion.discount_value),
+        }
+      : null,
   };
   if (includeCost) {
     out.cost_price = product.cost_price == null ? null : round2(product.cost_price);
@@ -72,11 +101,23 @@ async function optionalRole(req) {
 }
 
 async function loadContext() {
-  const [categories, settings] = await Promise.all([
+  const [categories, settings, promotions] = await Promise.all([
     q(supabase.from('categories').select('*')),
     getSettings(),
+    q(supabase.from('promotions').select('*').eq('is_active', true)),
   ]);
-  return { categoryById: new Map(categories.map((c) => [c.id, c])), settings };
+  return {
+    categoryById: new Map(categories.map((c) => [c.id, c])),
+    settings,
+    promotions,
+    nowMs: Date.now(),
+  };
+}
+
+/** Attaches the best active promotion covering this product (badge data). */
+function withPromotion(product, context, includeCost) {
+  const promo = bestPromotionFor(product, context.promotions, context.nowMs);
+  return present(product, context.categoryById, context.settings.vat_rate, includeCost, promo);
 }
 
 function checkCategories(input, categoryById) {
@@ -120,7 +161,7 @@ export default createHandler({
       q(supabase.from('products').select('*').order('id', { ascending: true })),
       loadContext(),
     ]);
-    return products.map((p) => present(p, context.categoryById, context.settings.vat_rate, includeCost));
+    return products.map((p) => withPromotion(p, context, includeCost));
   },
 
   async POST(req) {
@@ -142,7 +183,7 @@ export default createHandler({
         .select()
         .single(),
     );
-    return new Reply(201, present(row, context.categoryById, context.settings.vat_rate, true));
+    return new Reply(201, withPromotion(row, context, true));
   },
 
   async PUT(req) {
@@ -161,7 +202,7 @@ export default createHandler({
           .select(),
       );
       if (!rows.length) throw new HttpError(404, 'That product no longer exists.');
-      return present(rows[0], context.categoryById, context.settings.vat_rate, true);
+      return withPromotion(rows[0], context, true);
     }
 
     // Settings tab: the photo on its own, after an upload.
@@ -172,7 +213,7 @@ export default createHandler({
         supabase.from('products').update({ image }).eq('id', id).select(),
       );
       if (!rows.length) throw new HttpError(404, 'That product no longer exists.');
-      return present(rows[0], context.categoryById, context.settings.vat_rate, true);
+      return withPromotion(rows[0], context, true);
     }
 
     const id = schemas.id.parse(body.id);
@@ -195,7 +236,7 @@ export default createHandler({
         .select()
         .single(),
     );
-    return present(row, context.categoryById, context.settings.vat_rate, true);
+    return withPromotion(row, context, true);
   },
 
   async DELETE(req) {
