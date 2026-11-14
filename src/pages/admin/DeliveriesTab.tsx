@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   CheckCircle2,
   Lock,
@@ -19,7 +19,7 @@ import {
   sar,
   ltr,
 } from '../../lib/format';
-import type { Delivery, Order, StaffMember } from '../../lib/types';
+import type { Delivery, Order, Settings, StaffMember, Vehicle } from '../../lib/types';
 import { schemas, validate, type FieldErrors } from '../../lib/validation';
 import { EmptyState, TabIntro, useAction, type OpsProps } from './shared';
 import { t } from '../../lib/i18n';
@@ -28,6 +28,8 @@ interface CardProps extends OpsProps {
   order: Order;
   delivery: Delivery;
   staff: StaffMember[];
+  vehicles: Vehicle[];
+  requireOdometer: boolean;
 }
 
 function Timeline({ order, delivery }: { order: Order; delivery: Delivery }) {
@@ -67,23 +69,27 @@ function Timeline({ order, delivery }: { order: Order; delivery: Delivery }) {
   );
 }
 
-function DeliveryCard({ order, delivery, staff, isAdmin, me, reload }: CardProps) {
+function DeliveryCard({ order, delivery, staff, vehicles, requireOdometer, isAdmin, me, reload }: CardProps) {
   const action = useAction(reload);
   const [form, setForm] = useState({
     staff_id: delivery.staff_id ?? '',
+    vehicle_id: delivery.vehicle_id ? String(delivery.vehicle_id) : '',
     vehicle_type: delivery.vehicle_type ?? '',
     vehicle_plate: delivery.vehicle_plate ?? '',
   });
+  const [dispatchOdo, setDispatchOdo] = useState('');
+  const [dispatchError, setDispatchError] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
 
   // Keep the form in step with the server when another person changes the delivery.
   useEffect(() => {
     setForm({
       staff_id: delivery.staff_id ?? '',
+      vehicle_id: delivery.vehicle_id ? String(delivery.vehicle_id) : '',
       vehicle_type: delivery.vehicle_type ?? '',
       vehicle_plate: delivery.vehicle_plate ?? '',
     });
-  }, [delivery.staff_id, delivery.vehicle_type, delivery.vehicle_plate]);
+  }, [delivery.staff_id, delivery.vehicle_id, delivery.vehicle_type, delivery.vehicle_plate]);
 
   const accepted = Boolean(delivery.staff_accepted_at);
   const mine = delivery.staff_id === me.id;
@@ -105,7 +111,7 @@ function DeliveryCard({ order, delivery, staff, isAdmin, me, reload }: CardProps
       try {
         await api('/api/operations?resource=deliveries', {
           method: 'PUT',
-          body: { ...result.data, action: 'assign' },
+          body: { ...result.data, vehicle_id: form.vehicle_id || null, action: 'assign' },
         });
       } catch (err) {
         if (err instanceof ApiError) setErrors(err.fields);
@@ -114,13 +120,27 @@ function DeliveryCard({ order, delivery, staff, isAdmin, me, reload }: CardProps
     });
   };
 
-  const step = (name: 'accept' | 'dispatch' | 'deliver') =>
-    action.run(name, () =>
+  const step = (name: 'accept' | 'dispatch' | 'deliver') => {
+    if (name === 'dispatch') {
+      const need = requireOdometer;
+      const v = dispatchOdo.trim();
+      if (need && v === '') { setDispatchError(t('Enter the odometer reading.')); return; }
+      if (v !== '' && (!Number.isFinite(Number(v)) || Number(v) < 0)) { setDispatchError(t('Enter a valid odometer reading.')); return; }
+      setDispatchError('');
+      return action.run(name, () =>
+        api('/api/operations?resource=deliveries', {
+          method: 'PUT',
+          body: { id: delivery.id, action: name, odometer: v === '' ? null : Number(v) },
+        }),
+      );
+    }
+    return action.run(name, () =>
       api('/api/operations?resource=deliveries', {
         method: 'PUT',
         body: { id: delivery.id, action: name },
       }),
     );
+  };
 
   return (
     <li className="rounded-2xl border border-line bg-card p-5 sm:p-6">
@@ -211,41 +231,54 @@ function DeliveryCard({ order, delivery, staff, isAdmin, me, reload }: CardProps
                     : t("Can be changed until the staff member accepts.")}
             </p>
           </div>
-          <div>
-            <label htmlFor={`${id}-type`} className="mb-1.5 block text-sm font-semibold">
-              {t("Vehicle type")}
+          <div className="md:col-span-2">
+            <label htmlFor={`${id}-vehicle`} className="mb-1.5 block text-sm font-semibold">
+              {t("Vehicle")}
             </label>
-            <input
-              id={`${id}-type`}
+            <select
+              id={`${id}-vehicle`}
               className="field-input field-sm"
-              placeholder={t("e.g. Isuzu box truck")}
-              maxLength={60}
-              value={form.vehicle_type}
-              aria-invalid={errors.vehicle_type ? true : undefined}
-              onChange={(e) => setForm((f) => ({ ...f, vehicle_type: e.target.value }))}
-            />
-            {errors.vehicle_type && (
-              <p className="mt-1.5 text-sm font-medium text-danger">{errors.vehicle_type}</p>
+              value={form.vehicle_id}
+              aria-invalid={errors.vehicle_id ? true : undefined}
+              onChange={(e) => {
+                const vid = e.target.value;
+                const v = vehicles.find((x) => String(x.id) === vid);
+                setForm((f) => ({
+                  ...f,
+                  vehicle_id: vid,
+                  vehicle_type: v ? (v.vehicle_type ?? '') : f.vehicle_type,
+                  vehicle_plate: v ? v.plate_number : f.vehicle_plate,
+                }));
+              }}
+            >
+              <option value="">{t("Select a vehicle…")}</option>
+              {vehicles.filter((v) => v.is_active).map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name} · {v.plate_number}{v.vehicle_type ? ` · ${v.vehicle_type}` : ''}
+                </option>
+              ))}
+              {delivery.vehicle_id && !vehicles.some((v) => v.id === delivery.vehicle_id) && (
+                <option value={delivery.vehicle_id}>{delivery.vehicle_plate ?? t("Current vehicle")}</option>
+              )}
+            </select>
+            {errors.vehicle_id && (
+              <p className="mt-1.5 text-sm font-medium text-danger">{errors.vehicle_id}</p>
             )}
+            <p className="mt-1.5 text-sm text-muted">{t("Selecting a vehicle fills the plate number automatically.")}</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor={`${id}-type`} className="mb-1.5 block text-sm font-semibold">{t("Vehicle type")}</label>
+                <input id={`${id}-type`} className="field-input field-sm" maxLength={60} value={form.vehicle_type} readOnly={Boolean(form.vehicle_id)} aria-invalid={errors.vehicle_type ? true : undefined} onChange={(e) => setForm((f) => ({ ...f, vehicle_type: e.target.value }))} />
+                {errors.vehicle_type && <p className="mt-1.5 text-sm font-medium text-danger">{errors.vehicle_type}</p>}
+              </div>
+              <div>
+                <label htmlFor={`${id}-plate`} className="mb-1.5 block text-sm font-semibold">{t("Vehicle plate number")}</label>
+                <input id={`${id}-plate`} className="field-input field-sm" maxLength={30} value={form.vehicle_plate} readOnly={Boolean(form.vehicle_id)} aria-invalid={errors.vehicle_plate ? true : undefined} onChange={(e) => setForm((f) => ({ ...f, vehicle_plate: e.target.value }))} />
+                {errors.vehicle_plate && <p className="mt-1.5 text-sm font-medium text-danger">{errors.vehicle_plate}</p>}
+              </div>
+            </div>
           </div>
-          <div>
-            <label htmlFor={`${id}-plate`} className="mb-1.5 block text-sm font-semibold">
-              {t("Vehicle plate number")}
-            </label>
-            <input
-              id={`${id}-plate`}
-              className="field-input field-sm"
-              placeholder="e.g. JED-4821"
-              maxLength={30}
-              value={form.vehicle_plate}
-              aria-invalid={errors.vehicle_plate ? true : undefined}
-              onChange={(e) => setForm((f) => ({ ...f, vehicle_plate: e.target.value }))}
-            />
-            {errors.vehicle_plate && (
-              <p className="mt-1.5 text-sm font-medium text-danger">{errors.vehicle_plate}</p>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2.5 md:col-span-3">
+          <div className="flex flex-wrap items-end gap-2.5 md:col-span-3">
             <button
               type="submit"
               className="btn btn-primary btn-sm flex-1 sm:flex-none"
@@ -259,15 +292,32 @@ function DeliveryCard({ order, delivery, staff, isAdmin, me, reload }: CardProps
                   : t("Update assignment")}
             </button>
             {canDispatch && (
-              <button
-                type="button"
-                className="btn btn-dark btn-sm flex-1 sm:flex-none"
-                disabled={action.busy !== null}
-                onClick={() => void step('dispatch')}
-              >
-                {action.busy === 'dispatch' ? <Spinner /> : <Send className="h-4 w-4" aria-hidden="true" />}
-                {t("Mark dispatched")}
-              </button>
+              <div className="flex flex-1 flex-wrap items-end gap-2 sm:flex-none">
+                <div className="min-w-[10rem]">
+                  <label htmlFor={`${id}-odo`} className="mb-1 block text-xs font-semibold">
+                    {t("Odometer")}{requireOdometer ? ' *' : ` (${t('optional')})`}
+                  </label>
+                  <input
+                    id={`${id}-odo`}
+                    className="field-input field-sm"
+                    inputMode="numeric"
+                    placeholder={t("e.g. 45210")}
+                    value={dispatchOdo}
+                    aria-invalid={dispatchError ? true : undefined}
+                    onChange={(e) => { setDispatchOdo(e.target.value.replace(/[^\d.]/g, '')); setDispatchError(''); }}
+                  />
+                  {dispatchError && <p className="mt-1 text-xs font-medium text-danger">{dispatchError}</p>}
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-dark btn-sm"
+                  disabled={action.busy !== null}
+                  onClick={() => void step('dispatch')}
+                >
+                  {action.busy === 'dispatch' ? <Spinner /> : <Send className="h-4 w-4" aria-hidden="true" />}
+                  {t("Mark dispatched")}
+                </button>
+              </div>
             )}
           </div>
         </form>
@@ -284,8 +334,14 @@ function DeliveryCard({ order, delivery, staff, isAdmin, me, reload }: CardProps
             </div>
             <div>
               <dt className="text-muted">{t("Plate number")}</dt>
-              <dd className="font-semibold">{delivery.vehicle_plate ?? '—'}</dd>
+              <dd className="font-semibold" dir="ltr">{delivery.vehicle_plate ?? '—'}</dd>
             </div>
+            {delivery.dispatch_odometer != null && (
+              <div>
+                <dt className="text-muted">{t("Dispatch odometer")}</dt>
+                <dd className="font-semibold"><span dir="ltr">{Number(delivery.dispatch_odometer).toLocaleString()}</span> {t('km')}</dd>
+              </div>
+            )}
           </dl>
           {(canAccept || canDispatch || canDeliver) && (
             <div className="mt-4 flex flex-wrap gap-2.5">
@@ -301,15 +357,19 @@ function DeliveryCard({ order, delivery, staff, isAdmin, me, reload }: CardProps
                 </button>
               )}
               {canDispatch && (
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm flex-1 sm:flex-none"
-                  disabled={action.busy !== null}
-                  onClick={() => void step('dispatch')}
-                >
-                  {action.busy === 'dispatch' ? <Spinner /> : <Send className="h-4 w-4" aria-hidden="true" />}
-                  {t("Mark dispatched")}
-                </button>
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="min-w-[10rem]">
+                    <label htmlFor={`${id}-odo-s`} className="mb-1 block text-xs font-semibold">
+                      {t("Odometer")}{requireOdometer ? ' *' : ` (${t('optional')})`}
+                    </label>
+                    <input id={`${id}-odo-s`} className="field-input field-sm" inputMode="numeric" value={dispatchOdo} aria-invalid={dispatchError ? true : undefined} onChange={(e) => { setDispatchOdo(e.target.value.replace(/[^\d.]/g, '')); setDispatchError(''); }} />
+                    {dispatchError && <p className="mt-1 text-xs font-medium text-danger">{dispatchError}</p>}
+                  </div>
+                  <button type="button" className="btn btn-primary btn-sm" disabled={action.busy !== null} onClick={() => void step('dispatch')}>
+                    {action.busy === 'dispatch' ? <Spinner /> : <Send className="h-4 w-4" aria-hidden="true" />}
+                    {t("Mark dispatched")}
+                  </button>
+                </div>
               )}
               {canDeliver && (
                 <button
@@ -348,21 +408,28 @@ export default function DeliveriesTab(props: OpsProps) {
   const { orders, isAdmin } = props;
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [staffError, setStaffError] = useState<string | null>(null);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [requireOdometer, setRequireOdometer] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) return;
     let active = true;
     api<StaffMember[]>('/api/operations?resource=staff')
-      .then((list) => {
-        if (active) setStaff(list);
-      })
-      .catch((err) => {
-        if (active) setStaffError(errorMessage(err));
-      });
-    return () => {
-      active = false;
-    };
+      .then((list) => { if (active) setStaff(list); })
+      .catch((err) => { if (active) setStaffError(errorMessage(err)); });
+    api<{ vehicles: Vehicle[] }>('/api/vehicles')
+      .then((res) => { if (active) setVehicles(res.vehicles ?? []); })
+      .catch(() => {});
+    return () => { active = false; };
   }, [isAdmin]);
+
+  useEffect(() => {
+    let active = true;
+    api<Settings>('/api/operations?resource=settings')
+      .then((s) => { if (active) setRequireOdometer(Boolean(s.require_odometer_on_dispatch)); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   const rows = orders.filter((order): order is Order & { delivery: Delivery } => order.delivery !== null);
   const rank = { draft: 0, assigned: 1, dispatched: 2, delivered: 3 } as const;
@@ -391,7 +458,7 @@ export default function DeliveriesTab(props: OpsProps) {
       ) : (
         <ul className="space-y-4">
           {rows.map((order) => (
-            <DeliveryCard key={order.delivery.id} {...props} order={order} delivery={order.delivery} staff={staff} />
+            <DeliveryCard key={order.delivery.id} {...props} order={order} delivery={order.delivery} staff={staff} vehicles={vehicles} requireOdometer={requireOdometer} />
           ))}
         </ul>
       )}

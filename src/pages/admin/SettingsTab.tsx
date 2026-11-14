@@ -338,7 +338,7 @@ export default function SettingsTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [general, setGeneral] = useState({ vat_rate: '15', default_commission_rate: '2', seller_vat_number: '' });
+  const [general, setGeneral] = useState({ vat_rate: '15', default_commission_rate: '2', seller_vat_number: '', require_odometer_on_dispatch: false });
   const [generalErrors, setGeneralErrors] = useState<FieldErrors>({});
   const [generalSaved, setGeneralSaved] = useState(false);
   const [tier, setTier] = useState({ label: '', min_moq: '', rate: '' });
@@ -352,6 +352,7 @@ export default function SettingsTab() {
         vat_rate: String(data.vat_rate),
         default_commission_rate: String(data.default_commission_rate),
         seller_vat_number: data.seller_vat_number ?? '',
+        require_odometer_on_dispatch: Boolean(data.require_odometer_on_dispatch),
       });
       setError(null);
     } catch (err) {
@@ -398,6 +399,11 @@ export default function SettingsTab() {
       t("Company VAT registration no."),
       settings.seller_vat_number || '—',
       general.seller_vat_number || '—',
+    );
+    push(
+      t("Require odometer on dispatch"),
+      settings.require_odometer_on_dispatch ? t('Yes') : t('No'),
+      general.require_odometer_on_dispatch ? t('Yes') : t('No'),
     );
 
     const performSave = async () => {
@@ -557,6 +563,20 @@ export default function SettingsTab() {
             error={generalErrors.seller_vat_number}
             hint={t("Printed on order bills and receipts.")}
           />
+        </div>
+        <div className="mt-5 rounded-xl border border-line bg-paper-deep/40 p-4">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-primary"
+              checked={general.require_odometer_on_dispatch}
+              onChange={(e) => setGeneral((g) => ({ ...g, require_odometer_on_dispatch: e.target.checked }))}
+            />
+            <span>
+              <span className="block font-semibold">{t("Require odometer when starting dispatch")}</span>
+              <span className="mt-0.5 block text-sm text-muted">{t("When enabled, assigned staff must enter the vehicle odometer before marking a delivery as dispatched. Dispatch still does not change the order status beyond the normal delivery flow.")}</span>
+            </span>
+          </label>
         </div>
         {generalSaved && (
           <Alert tone="success" className="mt-5">
