@@ -288,7 +288,7 @@ function Header() {
                     to={link.to}
                     end={link.end}
                     className={({ isActive }) =>
-                      `flex min-h-14 items-center justify-between font-display text-2xl ${
+                      `flex min-h-14 items-center justify-between font-display text-lg ${
                         isActive ? 'text-primary-strong' : 'text-ink'
                       }`
                     }
@@ -308,7 +308,7 @@ function Header() {
                 >
                   <span className="flex items-center gap-3">
                     <Earth className="h-5 w-5 text-primary" aria-hidden="true" />
-                    <span className="font-display text-2xl">{t("Language")}</span>
+                    <span className="font-display text-lg">{t("Language")}</span>
                   </span>
                   <span
                     lang={lang === 'ar' ? 'en' : 'ar'}
@@ -330,7 +330,7 @@ function Header() {
                     ) : (
                       <Moon className="h-5 w-5 text-primary" aria-hidden="true" />
                     )}
-                    <span className="font-display text-2xl">
+                    <span className="font-display text-lg">
                       {theme === 'dark' ? t("Light mode") : t("Dark mode")}
                     </span>
                   </span>
@@ -347,7 +347,7 @@ function Header() {
                       setOpen(false);
                       void signOut();
                     }}
-                    className="flex min-h-14 w-full items-center justify-between font-display text-2xl text-danger"
+                    className="flex min-h-14 w-full items-center justify-between font-display text-lg text-danger"
                   >
                     <span>{t("Sign out (")}{profile.full_name.split(' ')[0]})</span>
                     <LogOut className="h-5 w-5" aria-hidden="true" />
@@ -355,7 +355,7 @@ function Header() {
                 ) : (
                   <NavLink
                     to="/login"
-                    className="flex min-h-14 items-center justify-between font-display text-2xl text-ink"
+                    className="flex min-h-14 items-center justify-between font-display text-lg text-ink"
                   >
                     <span>{t("Sign in")}</span>
                   </NavLink>
