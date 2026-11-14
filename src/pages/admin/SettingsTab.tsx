@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Percent, Plus, Save, ShieldCheck, Trash2 } from 'lucide-react';
+import ConfirmDialog, { type ConfirmChange, type ConfirmRequest } from '../../components/ConfirmDialog';
 import { Alert, ErrorPanel, Spinner, TextField } from '../../components/ui';
 import ProductImagePicker from '../../components/ProductImagePicker';
 import { api, ApiError, errorMessage, invalidate, useApi } from '../../lib/api';
@@ -60,6 +61,22 @@ function useProductVat(product: Product, defaultVat: number) {
 /** Desktop: one row of the VAT-per-product table. */
 function ProductVatRow({ product, defaultVat }: { product: Product; defaultVat: number }) {
   const v = useProductVat(product, defaultVat);
+  const [confirmSave, setConfirmSave] = useState(false);
+  const oldRate = product.vat_rate_override == null ? defaultVat : Number(product.vat_rate_override);
+  const changes: ConfirmChange[] = [];
+  if (Number(v.price) !== product.unit_price) {
+    changes.push({
+      label: t("Unit price excl. VAT (SAR)"),
+      from: sar(product.unit_price),
+      to: sar(Number(v.price) || 0),
+    });
+  }
+  if (v.vat.trim() !== '') {
+    const newRate = Number(v.vat) || 0;
+    if (newRate !== oldRate) {
+      changes.push({ label: t("VAT %"), from: percent(oldRate), to: percent(newRate) });
+    }
+  }
   return (
     <tr>
       <td>
@@ -101,7 +118,7 @@ function ProductVatRow({ product, defaultVat }: { product: Product; defaultVat: 
             type="button"
             className="btn btn-outline btn-sm"
             disabled={v.saving || !v.dirty}
-            onClick={() => void v.save()}
+            onClick={() => setConfirmSave(true)}
           >
             {v.saving ? <Spinner /> : <Save className="h-4 w-4" aria-hidden="true" />}
             {t("Save")}
@@ -115,6 +132,20 @@ function ProductVatRow({ product, defaultVat }: { product: Product; defaultVat: 
             </span>
           )}
         </div>
+        <ConfirmDialog
+          request={
+            confirmSave && changes.length > 0
+              ? {
+                  title: t("Confirm changes"),
+                  tone: 'primary',
+                  confirmLabel: t("Save"),
+                  changes,
+                  onConfirm: () => void v.save(),
+                }
+              : null
+          }
+          onClose={() => setConfirmSave(false)}
+        />
       </td>
     </tr>
   );
@@ -123,6 +154,22 @@ function ProductVatRow({ product, defaultVat }: { product: Product; defaultVat: 
 /** Phone: the same editor as a stacked card. */
 function ProductVatCard({ product, defaultVat }: { product: Product; defaultVat: number }) {
   const v = useProductVat(product, defaultVat);
+  const [confirmSave, setConfirmSave] = useState(false);
+  const oldRate = product.vat_rate_override == null ? defaultVat : Number(product.vat_rate_override);
+  const changes: ConfirmChange[] = [];
+  if (Number(v.price) !== product.unit_price) {
+    changes.push({
+      label: t("Unit price excl. VAT (SAR)"),
+      from: sar(product.unit_price),
+      to: sar(Number(v.price) || 0),
+    });
+  }
+  if (v.vat.trim() !== '') {
+    const newRate = Number(v.vat) || 0;
+    if (newRate !== oldRate) {
+      changes.push({ label: t("VAT %"), from: percent(oldRate), to: percent(newRate) });
+    }
+  }
   return (
     <li className="overflow-hidden rounded-2xl border border-line bg-card p-4">
       <p className="font-semibold">{t(product.name)}</p>
@@ -170,12 +217,12 @@ function ProductVatCard({ product, defaultVat }: { product: Product; defaultVat:
           <dd className="font-semibold tabular-nums">{sar(round2(v.numericPrice + v.vatValue))}</dd>
         </div>
       </dl>
-      <div className="-mx-4 -mb-4 mt-3 flex items-center gap-2 border-t border-line bg-paper-deep/40 px-4 py-2.5">
+      <div className="-mx-4 -mb-4 mt-3 flex flex-wrap items-center gap-2 border-t border-line bg-paper-deep/40 px-4 py-2.5">
         <button
           type="button"
           className="btn btn-outline btn-sm"
           disabled={v.saving || !v.dirty}
-          onClick={() => void v.save()}
+          onClick={() => setConfirmSave(true)}
         >
           {v.saving ? <Spinner /> : <Save className="h-4 w-4" aria-hidden="true" />}
           {t("Save")}
@@ -188,6 +235,20 @@ function ProductVatCard({ product, defaultVat }: { product: Product; defaultVat:
             {v.state.text}
           </span>
         )}
+        <ConfirmDialog
+          request={
+            confirmSave && v.dirty && changes.length > 0
+              ? {
+                  title: t("Confirm changes"),
+                  tone: 'primary',
+                  confirmLabel: t("Save"),
+                  changes,
+                  onConfirm: () => void v.save(),
+                }
+              : null
+          }
+          onClose={() => setConfirmSave(false)}
+        />
       </div>
     </li>
   );
@@ -321,18 +382,51 @@ export default function SettingsTab() {
       return;
     }
     setGeneralErrors({});
-    const ok = await action.run('general', async () => {
-      try {
-        await api('/api/operations?resource=settings', { method: 'PUT', body: result.data });
-      } catch (err) {
-        if (err instanceof ApiError) setGeneralErrors(err.fields);
-        throw err;
+    if (!settings) return;
+
+    const changes: ConfirmChange[] = [];
+    const push = (label: string, from: string | number, to: string) => {
+      if (String(from) !== String(to)) changes.push({ label, from: String(from), to });
+    };
+    push(t("Default VAT (%)"), percent(settings.vat_rate), percent(Number(general.vat_rate)));
+    push(
+      t("Default commission rate (%)"),
+      percent(settings.default_commission_rate),
+      percent(Number(general.default_commission_rate)),
+    );
+    push(
+      t("Company VAT registration no."),
+      settings.seller_vat_number || '—',
+      general.seller_vat_number || '—',
+    );
+
+    const performSave = async () => {
+      const ok = await action.run('general', async () => {
+        try {
+          await api('/api/operations?resource=settings', { method: 'PUT', body: result.data });
+        } catch (err) {
+          if (err instanceof ApiError) setGeneralErrors(err.fields);
+          throw err;
+        }
+      });
+      if (ok) {
+        setGeneralSaved(true);
+        invalidate('/api/products'); // the default VAT changes every product without its own rate
       }
-    });
-    if (ok) {
-      setGeneralSaved(true);
-      invalidate('/api/products'); // the default VAT changes every product without its own rate
+    };
+
+    // Editing the configuration: preview the values that will change first.
+    if (changes.length > 0) {
+      setGeneralConfirm({
+        title: t("Confirm changes"),
+        tone: 'primary',
+        confirmLabel: t("Save settings"),
+        changes,
+        onConfirm: () => void performSave(),
+      });
+      return;
     }
+    await performSave();
   };
 
   const addTier = async (event: FormEvent) => {
@@ -358,10 +452,22 @@ export default function SettingsTab() {
     if (ok) setTier({ label: '', min_moq: '', rate: '' });
   };
 
-  const removeTier = (id: number) =>
-    action.run(`tier-${id}`, () =>
-      api('/api/operations?resource=tiers', { method: 'DELETE', body: { id } }),
-    );
+  const [tierConfirm, setTierConfirm] = useState<ConfirmRequest | null>(null);
+  const [generalConfirm, setGeneralConfirm] = useState<ConfirmRequest | null>(null);
+
+  const removeTier = (id: number, label: string) => {
+    setTierConfirm({
+      title: t("Delete “{0}”?", [label]),
+      message: t("This cannot be undone."),
+      tone: 'danger',
+      confirmLabel: t("Delete"),
+      onConfirm: async () => {
+        await action.run(`tier-${id}`, () =>
+          api('/api/operations?resource=tiers', { method: 'DELETE', body: { id } }),
+        );
+      },
+    });
+  };
 
   if (error) return <ErrorPanel message={error} onRetry={() => void load()} />;
   if (loading || !settings) {
@@ -377,6 +483,24 @@ export default function SettingsTab() {
 
   return (
     <div className="space-y-10">
+      <ConfirmDialog request={tierConfirm} onClose={() => setTierConfirm(null)} />
+      <ConfirmDialog
+        request={
+          generalConfirm
+            ? {
+                title: t("Confirm changes"),
+                tone: 'primary',
+                confirmLabel: t("Save settings"),
+                changes: generalConfirm.changes,
+                onConfirm: () => {
+                  void generalConfirm.onConfirm();
+                  setGeneralConfirm(null);
+                },
+              }
+            : null
+        }
+        onClose={() => setGeneralConfirm(null)}
+      />
       <div>
         <TabIntro title={t("Settings")}>
           {t("Administrator-only configuration for VAT and staff commissions. Changes apply to new orders and new commission records; existing bills keep the values they were issued with.")}
@@ -589,7 +713,7 @@ export default function SettingsTab() {
                     <span className="font-display text-2xl text-primary-strong">{percent(row.rate)}</span>
                     <button
                       type="button"
-                      onClick={() => void removeTier(row.id)}
+                      onClick={() => removeTier(row.id, t(row.label))}
                       disabled={action.busy !== null}
                       aria-label={t("Delete tier {0}", [row.label])}
                       className="grid h-10 w-10 place-items-center rounded-full text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50"
