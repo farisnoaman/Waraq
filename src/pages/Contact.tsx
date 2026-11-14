@@ -108,7 +108,7 @@ export default function Contact() {
 
       <section className="container-x grid gap-10 py-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16 lg:py-16">
         <div className="space-y-5">
-          <div className="on-dark relative overflow-hidden rounded-2xl bg-forest p-6 text-paper sm:p-8">
+          <div className="on-dark relative overflow-hidden rounded-2xl bg-forest p-6 text-on-dark sm:p-8">
             <div aria-hidden="true" className="ruled absolute inset-0" />
             <div className="relative">
               <span className="grid h-12 w-12 place-items-center rounded-full bg-primary-bright/15 text-primary-bright">
@@ -117,11 +117,11 @@ export default function Contact() {
               <p className="eyebrow mt-5 text-brass-soft">{t("Email (")}{SITE_DOMAIN})</p>
               <a
                 href={`mailto:${SITE_EMAIL}`}
-                className="mt-2 inline-block break-all font-display text-3xl text-paper underline decoration-primary-bright/50 decoration-2 underline-offset-8 transition-colors hover:text-primary-bright sm:text-4xl"
+                className="mt-2 inline-block break-all font-display text-3xl text-on-dark underline decoration-primary-bright/50 decoration-2 underline-offset-8 transition-colors hover:text-primary-bright sm:text-4xl"
               >
                 {SITE_EMAIL}
               </a>
-              <p className="mt-4 text-paper/75">
+              <p className="mt-4 text-on-dark/75">
                 {t("The most direct way to reach Waraq Pro. Include your company name and what you need.")}
               </p>
             </div>

@@ -144,7 +144,7 @@ export default function AdminPortal() {
               {t("Offline · changes are disabled")}
             </span>
           )}
-          <span className="text-paper/70" role="status">
+          <span className="text-on-dark/70" role="status">
             {refreshing ? t("Refreshing…") : loadedAt ? t("Updated {0}", [formatDateTime(loadedAt)]) : ''}
           </span>
           <button
@@ -177,7 +177,7 @@ export default function AdminPortal() {
                     to={`/admin/${tab.to}`}
                     className={`flex min-h-11 items-center justify-center gap-2 rounded-xl border px-2 text-[13px] font-semibold transition-colors sm:text-sm ${
                       active
-                        ? 'border-forest bg-forest text-paper'
+                        ? 'border-forest bg-forest text-on-dark'
                         : 'border-line bg-card text-ink/80 hover:bg-paper-deep'
                     }`}
                   >
@@ -208,7 +208,7 @@ export default function AdminPortal() {
                   to={`/admin/${tab.to}`}
                   className={({ isActive }) =>
                     `inline-flex min-h-10 items-center gap-2 rounded-full px-3.5 text-sm font-semibold transition-colors ${
-                      isActive ? 'bg-forest text-paper' : 'text-ink/80 hover:bg-paper-deep'
+                      isActive ? 'bg-forest text-on-dark' : 'text-ink/80 hover:bg-paper-deep'
                     }`
                   }
                 >

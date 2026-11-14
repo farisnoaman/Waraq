@@ -81,7 +81,7 @@ export default function InstallBanner() {
           transition={{ duration: 0.25 }}
           role="status"
           aria-label={t("Install Waraq Pro")}
-          className="pointer-events-auto fixed inset-x-4 bottom-20 z-40 mx-auto flex max-w-md items-start gap-3 rounded-2xl bg-forest p-4 text-paper shadow-[0_18px_40px_-16px_rgba(0,0,0,0.5)] sm:bottom-5 print:hidden"
+          className="pointer-events-auto fixed inset-x-4 bottom-20 z-40 mx-auto flex max-w-md items-start gap-3 rounded-2xl bg-forest p-4 text-on-dark shadow-[0_18px_40px_-16px_rgba(0,0,0,0.5)] sm:bottom-5 print:hidden"
         >
           {/* The mark's icon in its dark variant, so it reads on the forest card. */}
           <svg viewBox="0 0 48 48" className="h-11 w-11 shrink-0" aria-hidden="true">
@@ -105,7 +105,7 @@ export default function InstallBanner() {
 
           <div className="min-w-0 flex-1">
             <p className="font-display text-base font-semibold">{t("Install Waraq Pro")}</p>
-            <p className="mt-0.5 text-sm leading-relaxed text-paper/75">
+            <p className="mt-0.5 text-sm leading-relaxed text-on-dark/75">
               {canPrompt
                 ? t("Add it to your device — it opens like an app and keeps your orders available offline.")
                 : os === 'ios'
@@ -128,7 +128,7 @@ export default function InstallBanner() {
             type="button"
             onClick={onHide}
             aria-label={t("Dismiss")}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-paper/70 transition-colors hover:bg-white/10 hover:text-paper"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-on-dark/70 transition-colors hover:bg-white/10 hover:text-on-dark"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>

@@ -491,7 +491,7 @@ export default function BuyerPortal() {
 
   const tabClass = ({ isActive }: { isActive: boolean }) =>
     `inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-[15px] font-semibold transition-colors ${
-      isActive ? 'bg-forest text-paper' : 'text-ink/80 hover:bg-paper-deep'
+      isActive ? 'bg-forest text-on-dark' : 'text-ink/80 hover:bg-paper-deep'
     }`;
 
   const renderList = (list: Order[]) => (
@@ -721,7 +721,7 @@ export default function BuyerPortal() {
               {t("Offline · showing saved orders")}
             </span>
           )}
-          <span className="text-paper/70" role="status">
+          <span className="text-on-dark/70" role="status">
             {data.syncing
               ? t("Syncing…")
               : data.syncedAt
@@ -729,7 +729,7 @@ export default function BuyerPortal() {
                 : t("Not synced yet")}
           </span>
           {data.queued.length > 0 && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 px-3 py-1 text-paper/85">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 px-3 py-1 text-on-dark/85">
               <Hourglass className="h-3.5 w-3.5" aria-hidden="true" />
               {data.queued.length} {data.queued.length === 1 ? t("action") : t("actions")}{' '}{t("waiting to sync")}
             </span>

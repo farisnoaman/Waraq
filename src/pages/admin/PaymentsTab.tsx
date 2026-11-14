@@ -108,7 +108,7 @@ function InstallmentForm({
             aria-pressed={picked === 'Full'}
             onClick={() => pick('Full', remaining)}
             className={`min-h-9 rounded-full px-3.5 text-sm font-semibold transition-colors ${
-              picked === 'Full' ? 'bg-primary text-white' : 'bg-forest text-paper hover:bg-forest-soft'
+              picked === 'Full' ? 'bg-primary text-white' : 'bg-forest text-on-dark hover:bg-forest-soft'
             }`}
           >
             {t("Full balance")}

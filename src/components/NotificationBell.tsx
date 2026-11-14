@@ -33,15 +33,15 @@ function Toast({ item, onClose }: { item: NotificationItem; onClose: () => void 
       exit={{ opacity: 0, y: 10 }}
       transition={{ duration: 0.22 }}
       role="status"
-      className="on-dark pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-2xl bg-forest p-4 text-paper shadow-[0_18px_40px_-16px_rgba(0,0,0,0.5)]"
+      className="on-dark pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-2xl bg-forest p-4 text-on-dark shadow-[0_18px_40px_-16px_rgba(0,0,0,0.5)]"
     >
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary-bright/20 text-primary-bright">
         <Bell className="h-4 w-4" aria-hidden="true" />
       </span>
       <div className="min-w-0 flex-1">
         <p className="font-semibold">{t('New notification')}</p>
-        <p className="mt-0.5 text-sm text-paper/85">{text.title}</p>
-        {text.body && <p className="mt-0.5 text-sm text-paper/70">{text.body}</p>}
+        <p className="mt-0.5 text-sm text-on-dark/85">{text.title}</p>
+        {text.body && <p className="mt-0.5 text-sm text-on-dark/70">{text.body}</p>}
         {item.order_id && (
           <Link
             to="/buyer"
@@ -56,7 +56,7 @@ function Toast({ item, onClose }: { item: NotificationItem; onClose: () => void 
         type="button"
         onClick={onClose}
         aria-label={t('Dismiss')}
-        className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-paper/70 transition-colors hover:bg-white/10 hover:text-paper"
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-on-dark/70 transition-colors hover:bg-white/10 hover:text-on-dark"
       >
         <X className="h-4 w-4" aria-hidden="true" />
       </button>

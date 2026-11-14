@@ -105,7 +105,7 @@ export default function Home() {
 
   return (
     <>
-      <section className="on-dark relative overflow-hidden bg-forest text-paper">
+      <section className="on-dark relative overflow-hidden bg-forest text-on-dark">
         <div aria-hidden="true" className="ruled absolute inset-0" />
         <div className="container-x relative grid gap-14 pb-20 pt-14 sm:pt-20 lg:grid-cols-12 lg:gap-10 lg:pb-24 lg:pt-24">
           <div className="lg:col-span-7 lg:pe-6">
@@ -137,7 +137,7 @@ export default function Home() {
               initial="hidden"
               animate="show"
               custom={2}
-              className="mt-6 max-w-xl text-lg text-paper/80 sm:text-xl"
+              className="mt-6 max-w-xl text-lg text-on-dark/80 sm:text-xl"
             >
               {t("Waraq Pro (")}{SITE_DOMAIN}{t(") is a Riyadh supplier established in 2015. Send us one request and we take care of the rest: confirmation, sourcing, quality check and door-to-door delivery.")}
             </motion.p>
@@ -224,8 +224,8 @@ export default function Home() {
           <dl className="container-x grid grid-cols-2 gap-x-6 gap-y-8 py-10 lg:grid-cols-4">
             {stats.map((stat) => (
               <div key={stat.label} className="flex flex-col-reverse gap-1">
-                <dt className="text-sm text-paper/70">{t(stat.label)}</dt>
-                <dd className="font-display text-4xl text-paper sm:text-5xl">
+                <dt className="text-sm text-on-dark/70">{t(stat.label)}</dt>
+                <dd className="font-display text-4xl text-on-dark sm:text-5xl">
                   {stat.value ?? (
                     <span className="skeleton skeleton-dark inline-block h-10 w-14 align-middle" />
                   )}
@@ -320,11 +320,11 @@ export default function Home() {
                           aria-hidden="true"
                           className="absolute inset-0 bg-gradient-to-t from-forest via-forest/55 to-forest/5"
                         />
-                        <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4 text-paper sm:p-6">
+                        <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4 text-on-dark sm:p-6">
                           <div>
                             <h3 className="text-lg leading-tight sm:text-2xl">{t(category.name)}</h3>
                             {products.data && (
-                              <p className="mt-1 text-sm text-paper/80">
+                              <p className="mt-1 text-sm text-on-dark/80">
                                 {count} {count === 1 ? t("product") : t("products")}
                               </p>
                             )}
@@ -343,7 +343,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="on-dark relative overflow-hidden bg-forest text-paper">
+      <section className="on-dark relative overflow-hidden bg-forest text-on-dark">
         <div aria-hidden="true" className="ruled absolute inset-0" />
         <div className="container-x relative py-20 lg:py-28">
           <Reveal>
@@ -395,7 +395,7 @@ export default function Home() {
                         </span>
                       </div>
                       <h3 className="mt-5 text-xl leading-snug">{t(step.title)}</h3>
-                      <p className="mt-2 text-[15px] text-paper/75">{t(step.summary)}</p>
+                      <p className="mt-2 text-[15px] text-on-dark/75">{t(step.summary)}</p>
                     </motion.li>
                   );
                 })}

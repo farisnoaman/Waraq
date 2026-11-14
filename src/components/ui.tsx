@@ -159,7 +159,7 @@ export function PageHeader({
     <section
       className={
         dark
-          ? 'on-dark relative overflow-hidden bg-forest text-paper print:hidden'
+          ? 'on-dark relative overflow-hidden bg-forest text-on-dark print:hidden'
           : 'relative overflow-hidden border-b border-line bg-paper-deep print:hidden'
       }
     >
@@ -168,7 +168,7 @@ export function PageHeader({
         <p className={`eyebrow ${dark ? 'text-brass-soft' : 'text-primary-strong'}`}>{eyebrow}</p>
         <h1 className="mt-4 max-w-3xl text-4xl leading-[1.06] sm:text-5xl lg:text-6xl">{title}</h1>
         {description && (
-          <p className={`mt-5 max-w-2xl text-lg ${dark ? 'text-paper/75' : 'text-muted'}`}>
+          <p className={`mt-5 max-w-2xl text-lg ${dark ? 'text-on-dark/75' : 'text-muted'}`}>
             {description}
           </p>
         )}
@@ -197,7 +197,7 @@ export function SectionHeading({
         <p className={`eyebrow ${dark ? 'text-brass-soft' : 'text-primary-strong'}`}>{eyebrow}</p>
         <h2 className="mt-3 text-3xl leading-[1.1] sm:text-4xl lg:text-[2.75rem]">{title}</h2>
         {description && (
-          <p className={`mt-4 text-lg ${dark ? 'text-paper/75' : 'text-muted'}`}>{description}</p>
+          <p className={`mt-4 text-lg ${dark ? 'text-on-dark/75' : 'text-muted'}`}>{description}</p>
         )}
       </div>
       {action && <div className="shrink-0">{action}</div>}
@@ -218,7 +218,7 @@ export function ErrorPanel({
     <div
       role="alert"
       className={`flex flex-col items-start gap-4 rounded-2xl border p-6 sm:flex-row sm:items-center sm:justify-between ${
-        dark ? 'border-white/15 bg-white/5 text-paper' : 'border-line bg-card text-ink'
+        dark ? 'border-white/15 bg-white/5 text-on-dark' : 'border-line bg-card text-ink'
       }`}
     >
       <div className="flex items-start gap-3">

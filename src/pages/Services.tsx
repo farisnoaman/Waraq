@@ -54,7 +54,7 @@ export default function Services() {
               <li key={step.id} className="flex items-center gap-2">
                 <a
                   href={`#step-${step.id}`}
-                  className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/20 px-4 text-sm font-medium text-paper transition-colors hover:border-primary-bright hover:text-primary-bright"
+                  className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/20 px-4 text-sm font-medium text-on-dark transition-colors hover:border-primary-bright hover:text-primary-bright"
                 >
                   <span className="font-display text-brass-soft">{i + 1}</span>
                   {t(step.title)}
