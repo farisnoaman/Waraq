@@ -183,6 +183,13 @@ export default function ProductDetail() {
                 </Link>
               )}
               <StockBadge inStock={product.in_stock} />
+              {product.promotion && (
+                <span className="rounded-full bg-brass px-2.5 py-1 text-xs font-bold text-white">
+                  {product.promotion.discount_type === 'percentage'
+                    ? t("Discount {0}", [`${product.promotion.discount_value}%`])
+                    : t("Discount {0}", [sar(product.promotion.discount_value)])}
+                </span>
+              )}
             </div>
             <h1 className="mt-4 text-4xl leading-[1.08] sm:text-5xl">{t(product.name)}</h1>
             <p className="mt-2 text-sm text-muted">
