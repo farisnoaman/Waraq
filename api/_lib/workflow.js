@@ -1,5 +1,6 @@
 import supabase from '../db-client.js';
 import { q } from './http.js';
+import { sendPushToUser } from './push.js';
 
 export const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 export const nowIso = () => new Date().toISOString();
@@ -9,6 +10,7 @@ export async function getSettings() {
   return {
     vat_rate: Number(row?.vat_rate ?? 15),
     default_commission_rate: Number(row?.default_commission_rate ?? 2),
+    require_odometer_on_dispatch: Boolean(row?.require_odometer_on_dispatch),
     // Falls back to the registered company number until the admin saves one in Settings.
     seller_vat_number: row?.seller_vat_number || '314635632800003',
   };
@@ -205,6 +207,8 @@ export async function notify({ userId, type, params = {}, orderId = null }) {
         order_id: orderId,
       }),
     );
+    // Push the same alert to the user's phone/desktop (best effort).
+    await sendPushToUser(userId, type, params);
   } catch (err) {
     // Notifications are best effort: a missing table or a failed insert must
     // never take the order, delivery or payment it belongs to down with it.

@@ -1,4 +1,5 @@
-import webpush from 'web-push';
+import * as webpushPkg from 'web-push';
+const webpush = webpushPkg.default ?? webpushPkg;
 import supabase from '../db-client.js';
 import { q } from './http.js';
 
