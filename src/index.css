@@ -113,7 +113,8 @@
     width: 100%;
     max-width: 80rem;
     margin-inline: auto;
-    padding-inline: 0.875rem;
+    /* Phones: half of the original 14px, per the card-edge spacing request. */
+    padding-inline: 0.4375rem;
   }
 
   @media (min-width: 640px) {
