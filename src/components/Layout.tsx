@@ -287,6 +287,7 @@ function Header() {
                   <NavLink
                     to={link.to}
                     end={link.end}
+                    onClick={() => setOpen(false)}
                     className={({ isActive }) =>
                       `flex min-h-14 items-center justify-between font-display text-lg ${
                         isActive ? 'text-primary-strong' : 'text-ink'
@@ -300,7 +301,10 @@ function Header() {
               <li className="border-b border-line last:border-b-0">
                 <button
                   type="button"
-                  onClick={toggleLang}
+                  onClick={() => {
+                    toggleLang();
+                    setOpen(false);
+                  }}
                   aria-label={
                     lang === 'ar' ? 'EN — Switch to English' : 'عربي — التبديل إلى العربية'
                   }
@@ -321,7 +325,10 @@ function Header() {
               <li className="border-b border-line last:border-b-0">
                 <button
                   type="button"
-                  onClick={toggleTheme}
+                  onClick={() => {
+                    toggleTheme();
+                    setOpen(false);
+                  }}
                   className="flex min-h-14 w-full items-center justify-between text-ink"
                 >
                   <span className="flex items-center gap-3">
