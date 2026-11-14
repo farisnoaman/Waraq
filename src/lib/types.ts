@@ -220,6 +220,7 @@ export interface Promotion {
 export interface OrdersResponse {
   orders: Order[];
   seller_vat_number: string;
+  require_odometer_on_dispatch?: boolean;
 }
 
 export interface CommissionLine {

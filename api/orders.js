@@ -51,6 +51,7 @@ export default createHandler({
     return {
       orders: await hydrateOrders(orders),
       seller_vat_number: settings.seller_vat_number,
+      require_odometer_on_dispatch: Boolean(settings.require_odometer_on_dispatch),
     };
   },
 

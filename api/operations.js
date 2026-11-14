@@ -49,12 +49,21 @@ async function updateDelivery(body, auth) {
       );
     }
 
+    let vehicle = null;
+    if (input.vehicle_id) {
+      vehicle = await q(supabase.from('vehicles').select('*').eq('id', input.vehicle_id).maybeSingle());
+      if (!vehicle) throw new HttpError(400, 'That vehicle could not be found.', { vehicle_id: 'Choose a valid vehicle.' });
+    }
+    const vehicleType = vehicle?.vehicle_type || input.vehicle_type;
+    const vehiclePlate = vehicle?.plate_number || input.vehicle_plate;
+
     let update = supabase
       .from('deliveries')
       .update({
         staff_id: input.staff_id,
-        vehicle_type: input.vehicle_type,
-        vehicle_plate: input.vehicle_plate,
+        vehicle_id: vehicle ? vehicle.id : (input.vehicle_id ?? delivery.vehicle_id ?? null),
+        vehicle_type: vehicleType,
+        vehicle_plate: vehiclePlate,
         status: 'assigned',
         assigned_at: changingStaff || !delivery.assigned_at ? now : delivery.assigned_at,
         updated_at: now,
@@ -125,22 +134,39 @@ async function updateDelivery(body, auth) {
     if (!delivery.staff_accepted_at) {
       throw new HttpError(409, 'The assigned staff member must accept the delivery before dispatch.');
     }
+    const { require_odometer_on_dispatch } = await getSettings();
+    const odometer = body.odometer == null || body.odometer === '' ? null : Number(body.odometer);
+    if (require_odometer_on_dispatch && (odometer == null || !Number.isFinite(odometer))) {
+      throw new HttpError(400, 'Enter the odometer reading to dispatch this delivery.', {
+        odometer: 'Enter the odometer reading.',
+      });
+    }
+    if (odometer != null && (!Number.isFinite(odometer) || odometer < 0)) {
+      throw new HttpError(400, 'Enter a valid odometer reading.', { odometer: 'Enter a valid odometer reading.' });
+    }
     const rows = await q(
       supabase
         .from('deliveries')
-        .update({ status: 'dispatched', dispatched_at: now, updated_at: now })
+        .update({
+          status: 'dispatched',
+          dispatched_at: now,
+          dispatch_odometer: odometer,
+          updated_at: now,
+        })
         .eq('id', id)
         .eq('status', 'assigned')
         .select(),
     );
     if (!rows.length) throw new HttpError(409, 'This delivery was already updated.');
-    await q(
-      supabase
-        .from('orders')
-        .update({ status: 'in_delivery', updated_at: now })
-        .eq('id', delivery.order_id)
-        .in('status', ['confirmed', 'preparing', 'under_processing']),
-    );
+    if (rows[0]?.vehicle_id && odometer != null) {
+      await q(
+        supabase
+          .from('vehicles')
+          .update({ current_odometer: odometer, updated_at: now })
+          .eq('id', rows[0].vehicle_id)
+          .lt('current_odometer', odometer),
+      );
+    }
     const order = await q(
       supabase
         .from('orders')
@@ -502,7 +528,7 @@ async function updateRole(body, auth) {
 /* -------------------------------------------------------------- settings */
 
 async function readSettings(auth) {
-  requireRole(auth, 'admin');
+  requireRole(auth, 'admin', 'staff');
   const [settings, tiers] = await Promise.all([
     getSettings(),
     q(supabase.from('commission_tiers').select('*').order('min_moq', { ascending: true })),
@@ -519,6 +545,7 @@ async function saveSettings(body, auth) {
       vat_rate: input.vat_rate,
       default_commission_rate: input.default_commission_rate,
       seller_vat_number: input.seller_vat_number || null,
+      require_odometer_on_dispatch: Boolean(input.require_odometer_on_dispatch),
       updated_at: nowIso(),
     }),
   );

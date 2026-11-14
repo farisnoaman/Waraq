@@ -2,16 +2,21 @@ import supabase from './db-client.js';
 import { createHandler, HttpError, q, readBody } from './_lib/http.js';
 import { getAuth, requireRole } from './_lib/auth.js';
 
-const BUCKET = 'product-images';
 const MAX_BYTES = 2 * 1024 * 1024;
+const BUCKETS = {
+  product: 'product-images',
+  category: 'product-images',
+  vehicle: 'vehicle-docs',
+};
 
-/** Only these picture formats are accepted, and each has its own extension. */
-const TYPES = {
+/** Accepted file formats. */
+const IMAGE_TYPES = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
   'image/avif': 'avif',
 };
+const BILL_TYPES = { ...IMAGE_TYPES, 'application/pdf': 'pdf' };
 
 /**
  * Reads the bytes of a picture and checks that they really are the picture
@@ -20,6 +25,7 @@ const TYPES = {
  * bucket and opened as a page by whoever the link was sent to.
  */
 function sniff(buffer) {
+  if (buffer.length >= 4 && buffer.toString('ascii', 0, 4) === '%PDF') return 'application/pdf';
   if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
     return 'image/jpeg';
   }
@@ -77,9 +83,11 @@ async function readFile(req) {
   throw new HttpError(400, 'No picture was received.');
 }
 
-/** The folder the picture is filed under inside the bucket. */
-function safeFolder(value) {
-  return value === 'category' ? 'category' : 'product';
+/** Target bucket/folder. */
+function resolveTarget(value) {
+  if (value === 'vehicle') return { bucket: BUCKETS.vehicle, folder: 'bills', allowPdf: true };
+  if (value === 'category') return { bucket: BUCKETS.category, folder: 'category', allowPdf: false };
+  return { bucket: BUCKETS.product, folder: 'product', allowPdf: false };
 }
 
 export default createHandler({
@@ -89,49 +97,50 @@ export default createHandler({
    * uploaded picture or at one of the built-in ones.
    */
   async POST(req) {
-    requireRole(await getAuth(req), 'admin');
+    const target = resolveTarget(req.query?.folder);
+    if (target.allowPdf) requireRole(await getAuth(req), 'admin', 'staff');
+    else requireRole(await getAuth(req), 'admin');
 
     const { buffer, type } = await readFile(req);
+    const types = target.allowPdf ? BILL_TYPES : IMAGE_TYPES;
 
-    if (buffer.length === 0) throw new HttpError(400, 'The picture is empty.');
+    if (buffer.length === 0) throw new HttpError(400, 'The file is empty.');
     if (buffer.length > MAX_BYTES) {
-      throw new HttpError(413, 'The picture is larger than 2 MB. Please choose a smaller one.');
+      throw new HttpError(413, 'The file is larger than 2 MB. Please choose a smaller one.');
     }
 
     const sniffed = sniff(buffer);
-    if (!sniffed || !TYPES[sniffed]) {
-      throw new HttpError(415, 'Use a JPEG, PNG, WebP or AVIF picture.');
+    if (!sniffed || !types[sniffed]) {
+      throw new HttpError(415, target.allowPdf ? 'Use a JPEG, PNG, WebP, AVIF or PDF file.' : 'Use a JPEG, PNG, WebP or AVIF picture.');
     }
-    if (type && !TYPES[type]) {
-      throw new HttpError(415, 'Use a JPEG, PNG, WebP or AVIF picture.');
+    if (type && !types[type] && !(target.allowPdf && type === 'application/pdf')) {
+      throw new HttpError(415, target.allowPdf ? 'Use a JPEG, PNG, WebP, AVIF or PDF file.' : 'Use a JPEG, PNG, WebP or AVIF picture.');
     }
 
-    const folder = safeFolder(req.query?.folder);
-    const extension = TYPES[sniffed];
-    // The name is built here, never taken from the client.
+    const extension = types[sniffed];
     const name = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${extension}`;
-    const path = `${folder}/${name}`;
+    const path = `${target.folder}/${name}`;
 
     const { error } = await supabase.storage
-      .from(BUCKET)
+      .from(target.bucket)
       .upload(path, buffer, { contentType: sniffed, upsert: false });
-    if (error) throw new HttpError(500, 'The picture could not be saved. Please try again.');
+    if (error) throw new HttpError(500, 'The file could not be saved. Please try again.');
 
-    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-    return { url: data.publicUrl, path };
+    const { data } = supabase.storage.from(target.bucket).getPublicUrl(path);
+    return { url: data.publicUrl, path, bucket: target.bucket };
   },
 
   /** Removes a picture that was replaced. */
   async DELETE(req) {
-    requireRole(await getAuth(req), 'admin');
-
+    const auth = await getAuth(req);
     const body = readBody(req);
     const path = String(body?.path ?? '');
-    if (!/^(product|category)\/[A-Za-z0-9._-]+$/.test(path)) {
-      throw new HttpError(400, 'That is not a picture address.');
-    }
-
-    await q(supabase.storage.from(BUCKET).remove([path]));
+    const bucket = String(body?.bucket ?? (path.startsWith('bills/') ? 'vehicle-docs' : 'product-images'));
+    if (bucket === 'vehicle-docs') requireRole(auth, 'admin', 'staff');
+    else requireRole(auth, 'admin');
+    const ok = /^(product|category|bills)\/[A-Za-z0-9._-]+$/.test(path);
+    if (!ok) throw new HttpError(400, 'That is not a valid file path.');
+    await q(supabase.storage.from(bucket).remove([path]));
     return { ok: true };
   },
 });

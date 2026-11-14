@@ -272,6 +272,7 @@ export const schemas = {
   assign: z.object({
     id,
     staff_id: z.preprocess(toTrimmed, z.string().min(1, 'Choose a staff member.').pipe(uuid)),
+    vehicle_id: z.preprocess((v) => (v === '' || v == null ? null : v), id.nullable().optional()),
     vehicle_type: text(60, 2, 'Enter the vehicle type.'),
     vehicle_plate: text(30, 2, 'Enter the vehicle plate number.'),
   }),
@@ -290,6 +291,7 @@ export const schemas = {
       toTrimmed,
       z.string().regex(/^(\d{15})?$/, 'A Saudi VAT registration number has 15 digits.'),
     ),
+    require_odometer_on_dispatch: z.boolean().optional(),
   }),
 
   tier: z.object({
@@ -308,6 +310,57 @@ export const schemas = {
   roleUpdate: z.object({
     id: uuid,
     role: z.enum(['buyer', 'staff'], 'Choose buyer or staff.'),
+  }),
+
+  vehicle: z.object({
+    name: text(120, 2, 'Enter the vehicle name.'),
+    plate_number: text(30, 2, 'Enter the plate number.'),
+    vehicle_type: text(60),
+    current_odometer: decimalRange(0, 100000000, 'Enter a valid odometer reading.'),
+    is_active: z.boolean().optional(),
+    notes: text(500),
+  }),
+
+  vehicleFuel: z.object({
+    vehicle_id: id,
+    filled_at: nullableDatetime,
+    odometer: nullableDecimal(0, 100000000, 'Enter a valid odometer reading.'),
+    liters: nullableDecimal(0, 100000, 'Enter a valid amount.'),
+    price_total: decimalRange(0, 100000000, 'Enter a valid amount.'),
+    station: text(120),
+    notes: text(1000),
+    bill_path: text(400),
+    bill_url: text(600),
+  }),
+
+  vehicleMaintenance: z.object({
+    vehicle_id: id,
+    serviced_at: nullableDatetime,
+    odometer: nullableDecimal(0, 100000000, 'Enter a valid odometer reading.'),
+    service_type: text(120, 2, 'Enter the service type.'),
+    price_total: decimalRange(0, 100000000, 'Enter a valid amount.'),
+    vendor: text(120),
+    notes: text(1000),
+    bill_path: text(400),
+    bill_url: text(600),
+  }),
+
+  movementRequest: z.object({
+    vehicle_id: id,
+    reason: text(500, 3, 'Please describe the reason.'),
+    departure_odometer: nullableDecimal(0, 100000000, 'Enter a valid odometer reading.'),
+  }),
+
+  movementDecision: z.object({
+    id,
+    action: z.enum(['approve', 'reject', 'complete', 'cancel']),
+    rejected_reason: text(300),
+    return_odometer: nullableDecimal(0, 100000000, 'Enter a valid odometer reading.'),
+  }),
+
+  dispatch: z.object({
+    id,
+    odometer: nullableDecimal(0, 100000000, 'Enter a valid odometer reading.'),
   }),
 };
 
