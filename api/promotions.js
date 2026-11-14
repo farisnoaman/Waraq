@@ -25,6 +25,19 @@ async function loadRow(id) {
   return row;
 }
 
+/** Deduplicates the selected products and verifies every id exists. */
+async function resolveAppliesTo(productIds) {
+  const ids = [...new Set((productIds ?? []).map((v) => Number(v)).filter(Number.isInteger))];
+  if (!ids.length) return [];
+  const rows = await q(supabase.from('products').select('id').in('id', ids));
+  if (rows.length !== ids.length) {
+    throw new HttpError(400, 'One or more selected products could not be found.', {
+      applies_to: 'One or more selected products could not be found.',
+    });
+  }
+  return ids;
+}
+
 export default createHandler({
   async GET(req) {
     requireRole(await getAuth(req), 'admin');
@@ -42,6 +55,7 @@ export default createHandler({
         discount_value: 'Use a percentage between 0 and 100.',
       });
     }
+    const appliesTo = await resolveAppliesTo(input.applies_to);
     const row = await q(
       supabase
         .from('promotions')
@@ -52,6 +66,7 @@ export default createHandler({
           discount_value: input.discount_value,
           threshold_type: input.threshold_type,
           threshold_value: input.threshold_value,
+          applies_to: appliesTo,
           starts_at: new Date(input.starts_at).toISOString(),
           expires_at: new Date(input.expires_at).toISOString(),
           is_active: true,
@@ -101,6 +116,7 @@ export default createHandler({
         discount_value: 'Use a percentage between 0 and 100.',
       });
     }
+    const appliesTo = await resolveAppliesTo(input.applies_to);
     const updated = await q(
       supabase
         .from('promotions')
@@ -111,6 +127,7 @@ export default createHandler({
           discount_value: input.discount_value,
           threshold_type: input.threshold_type,
           threshold_value: input.threshold_value,
+          applies_to: appliesTo,
           starts_at: new Date(input.starts_at).toISOString(),
           expires_at: new Date(input.expires_at).toISOString(),
           updated_at: nowIso(),

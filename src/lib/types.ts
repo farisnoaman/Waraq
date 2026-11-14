@@ -199,6 +199,8 @@ export interface Promotion {
   discount_value: number;
   threshold_type: PromoThresholdType;
   threshold_value: number;
+  /** Product ids the promotion targets; empty = every product. */
+  applies_to: number[];
   starts_at: string;
   expires_at: string;
   is_active: boolean;

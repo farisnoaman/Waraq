@@ -136,22 +136,41 @@ export default createHandler({
     });
 
     // One promotion maximum: running now, threshold met, biggest discount.
-    // The discount applies to the VAT-inclusive total.
+    // A promotion scoped to specific products measures its threshold against,
+    // and discounts, only the order lines of those products; an unscoped one
+    // considers the whole order. The discount applies to the VAT-inclusive
+    // amount of that scope.
     const nowMs = Date.parse(nowIso());
     let best = null;
     for (const promo of promotions) {
       if (Date.parse(promo.starts_at) > nowMs || Date.parse(promo.expires_at) < nowMs) continue;
+      const scope = Array.isArray(promo.applies_to)
+        ? promo.applies_to.map((v) => Number(v)).filter(Number.isInteger)
+        : [];
+      const scopedLines = scope.length ? lines.filter((line) => scope.includes(line.product_id)) : lines;
+      if (!scopedLines.length) continue;
+      const scopedSubtotal = round2(scopedLines.reduce((sum, line) => sum + line.line_subtotal, 0));
+      const scopedVat = round2(scopedLines.reduce((sum, line) => sum + line.line_vat, 0));
+      const scopedUnits = scopedLines.reduce(
+        (sum, line) =>
+          sum + (line.unit_type === 'carton' ? line.qty * (line.units_per_carton ?? 1) : line.qty),
+        0,
+      );
+      const scopedCartons = scopedLines.reduce(
+        (sum, line) => sum + (line.unit_type === 'carton' ? line.qty : 0),
+        0,
+      );
       const met =
         promo.threshold_type === 'order_total'
-          ? subtotal >= Number(promo.threshold_value)
+          ? scopedSubtotal >= Number(promo.threshold_value)
           : promo.threshold_type === 'total_units'
-            ? totalUnits >= Number(promo.threshold_value)
-            : totalCartons.value >= Number(promo.threshold_value);
+            ? scopedUnits >= Number(promo.threshold_value)
+            : scopedCartons >= Number(promo.threshold_value);
       if (!met) continue;
       const amount =
         promo.discount_type === 'percentage'
-          ? round2((subtotal * Number(promo.discount_value)) / 100)
-          : round2(Math.min(Number(promo.discount_value), round2(subtotal + vatTotal)));
+          ? round2((scopedSubtotal * Number(promo.discount_value)) / 100)
+          : round2(Math.min(Number(promo.discount_value), round2(scopedSubtotal + scopedVat)));
       if (amount <= 0) continue;
       if (!best || amount > best.amount) best = { promo, amount };
     }

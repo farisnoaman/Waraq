@@ -239,6 +239,12 @@ export const schemas = {
       discount_value: decimalRange(0.01, 100000, 'Enter a discount value greater than 0.'),
       threshold_type: z.enum(PROMO_THRESHOLDS, 'Choose a threshold type.'),
       threshold_value: decimalRange(0.01, 1000000, 'Enter the threshold the order must reach.'),
+      // Empty array = every product. Otherwise the threshold and the discount
+      // consider only the order lines of these products.
+      applies_to: z.preprocess(
+        (v) => (v == null ? [] : v),
+        z.array(id).max(500),
+      ),
       starts_at: nullableDatetime,
       expires_at: nullableDatetime,
       is_active: z.boolean().optional(),

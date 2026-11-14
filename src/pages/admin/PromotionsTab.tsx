@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Tags, Pencil, Plus, Trash2, Power, CalendarClock, X } from 'lucide-react';
+import { Tags, Pencil, Plus, Search, Trash2, Power, CalendarClock, X } from 'lucide-react';
 import ResponsiveTable, { type ResponsiveColumn } from '../../components/ResponsiveTable';
 import { Alert, Badge, ErrorPanel, SelectField, Spinner, TextAreaField, TextField } from '../../components/ui';
-import { api, errorMessage } from '../../lib/api';
+import { api, errorMessage, useApi } from '../../lib/api';
 import { formatDateTime, sar } from '../../lib/format';
 import type { Promotion, PromotionStatus } from '../../lib/types';
 import { schemas, validate } from '../../lib/validation';
@@ -25,6 +25,9 @@ interface FormState {
   discount_value: string;
   threshold_type: 'order_total' | 'total_units' | 'total_cartons';
   threshold_value: string;
+  /** true = every product; false = the ids in applies_to. */
+  scopeAll: boolean;
+  applies_to: number[];
   starts_at: string;
   expires_at: string;
 }
@@ -36,6 +39,8 @@ const EMPTY_FORM: FormState = {
   discount_value: '',
   threshold_type: 'order_total',
   threshold_value: '',
+  scopeAll: true,
+  applies_to: [],
   starts_at: '',
   expires_at: '',
 };
@@ -71,6 +76,8 @@ export default function PromotionsTab(_props: OpsProps) {
   const [form, setForm] = useState<(FormState & { id: number | null }) | null>(null);
   const [errors, setErrors] = useState<FormStateErrors>({});
   const [notice, setNotice] = useState<string | null>(null);
+  const [productQuery, setProductQuery] = useState('');
+  const products = useApi<{ id: number; name: string; sku: string }[]>('/api/products');
 
   const load = useCallback(async () => {
     try {
@@ -99,12 +106,14 @@ export default function PromotionsTab(_props: OpsProps) {
 
   const openCreate = () => {
     setNotice(null);
+    setProductQuery('');
     setForm({ ...EMPTY_FORM, id: null });
     setErrors({});
   };
 
   const openEdit = (promo: Promotion) => {
     setNotice(null);
+    setProductQuery('');
     setForm({
       id: promo.id,
       name: promo.name,
@@ -113,6 +122,8 @@ export default function PromotionsTab(_props: OpsProps) {
       discount_value: String(promo.discount_value),
       threshold_type: promo.threshold_type,
       threshold_value: String(promo.threshold_value),
+      scopeAll: (promo.applies_to?.length ?? 0) === 0,
+      applies_to: promo.applies_to ?? [],
       starts_at: toInput(promo.starts_at),
       expires_at: toInput(promo.expires_at),
     });
@@ -145,6 +156,23 @@ export default function PromotionsTab(_props: OpsProps) {
       }
     });
     if (!ok) return;
+  };
+
+  const toggleProduct = (productId: number) => {
+    setForm((current) => {
+      if (!current) return current;
+      const selected = current.applies_to.includes(productId)
+        ? current.applies_to.filter((id) => id !== productId)
+        : [...current.applies_to, productId];
+      return { ...current, applies_to: selected };
+    });
+    setErrors((current) => ({ ...current, applies_to: '' }));
+  };
+
+  const setScope = (all: boolean) => {
+    setForm((current) =>
+      current ? { ...current, scopeAll: all, applies_to: all ? [] : current.applies_to } : current,
+    );
   };
 
   const setStatus = async (promo: Promotion, next: 'activate' | 'deactivate') => {
@@ -217,6 +245,21 @@ export default function PromotionsTab(_props: OpsProps) {
       ),
     },
     { label: t("Threshold"), render: (promo) => thresholdLabel(promo) },
+    {
+      label: t("Applies to"),
+      render: (promo) => {
+        const count = Array.isArray(promo.applies_to) ? promo.applies_to.length : 0;
+        return (
+          <span className={count > 0 ? 'font-medium' : ''}>
+            {count === 0
+              ? t("All products")
+              : count === 1
+                ? t("1 product")
+                : t("{0} products", [count])}
+          </span>
+        );
+      },
+    },
     {
       label: t("Schedule"),
       render: (promo) => (
@@ -389,6 +432,103 @@ export default function PromotionsTab(_props: OpsProps) {
               error={errors.threshold_value}
               hint={t("The discount applies when the order reaches this.")}
             />
+            <div className="sm:col-span-2">
+              <p className="mb-1.5 block text-sm font-semibold">{t("Applies to")}</p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  aria-pressed={form.scopeAll}
+                  onClick={() => setScope(true)}
+                  className={`inline-flex min-h-9 items-center rounded-full px-3.5 text-sm font-semibold transition-colors ${
+                    form.scopeAll ? 'bg-primary text-white' : 'bg-paper-deep text-ink hover:bg-line'
+                  }`}
+                >
+                  {t("All products")}
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={!form.scopeAll}
+                  onClick={() => setScope(false)}
+                  className={`inline-flex min-h-9 items-center rounded-full px-3.5 text-sm font-semibold transition-colors ${
+                    !form.scopeAll ? 'bg-primary text-white' : 'bg-paper-deep text-ink hover:bg-line'
+                  }`}
+                >
+                  {t("Selected products")}
+                </button>
+              </div>
+
+              {!form.scopeAll && (
+                <div className="mt-3 rounded-xl border border-line bg-white">
+                  <div className="flex items-center gap-2 border-b border-line px-3 py-2">
+                    <Search className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+                    <input
+                      type="search"
+                      className="field-input field-sm flex-1 border-0 bg-transparent ps-1 shadow-none focus:shadow-none"
+                      placeholder={t("Search products")}
+                      maxLength={80}
+                      value={productQuery}
+                      onChange={(e) => setProductQuery(e.target.value)}
+                      aria-label={t("Search products")}
+                    />
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-primary-strong hover:underline"
+                      onClick={() =>
+                        setForm((current) =>
+                          current
+                            ? { ...current, applies_to: (products.data ?? []).map((p) => p.id) }
+                            : current,
+                        )
+                      }
+                    >
+                      {t("Select all")}
+                    </button>
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-muted hover:text-danger"
+                      onClick={() => setForm((current) => (current ? { ...current, applies_to: [] } : current))}
+                    >
+                      {t("Clear")}
+                    </button>
+                  </div>
+                  <ul className="max-h-56 divide-y divide-line/60 overflow-y-auto">
+                    {(products.data ?? [])
+                      .filter(
+                        (product) =>
+                          !productQuery.trim() ||
+                          [product.name, product.sku]
+                            .join(' ')
+                            .toLowerCase()
+                            .includes(productQuery.trim().toLowerCase()),
+                      )
+                      .map((product) => (
+                        <li key={product.id}>
+                          <label className="flex cursor-pointer items-center gap-2.5 px-3 py-2 text-sm hover:bg-paper-deep/60">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 accent-primary"
+                              checked={form.applies_to.includes(product.id)}
+                              onChange={() => toggleProduct(product.id)}
+                            />
+                            <span className="min-w-0 flex-1 truncate">{t(product.name)}</span>
+                            <span className="text-xs text-muted">{product.sku}</span>
+                          </label>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+              {errors.applies_to && (
+                <p className="mt-1.5 text-sm font-medium text-danger">{errors.applies_to}</p>
+              )}
+              <p className="mt-1.5 text-xs text-muted">
+                {form.scopeAll
+                  ? t("The threshold and the discount look at the whole order.")
+                  : form.applies_to.length > 0
+                    ? t("{0} products selected", [form.applies_to.length])
+                    : t("Select at least one product, or switch back to All products.")}
+              </p>
+            </div>
             <TextField
               id="promo-starts"
               label={t("Starts at")}
