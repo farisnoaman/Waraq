@@ -418,13 +418,14 @@ export default function PromotionsTab(_props: OpsProps) {
             </button>
           </div>
 
-          <div className="mt-5 grid gap-5 sm:grid-cols-2">
+          <div className="mt-4 grid gap-4 [&>*]:min-w-0 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <TextField
                 id="promo-name"
                 label={t("Name")}
                 required
                 maxLength={120}
+                className="field-sm"
                 value={form.name}
                 onChange={set('name')}
                 error={errors.name}
@@ -436,6 +437,7 @@ export default function PromotionsTab(_props: OpsProps) {
                 label={t("Description")}
                 rows={2}
                 maxLength={300}
+                className="field-sm"
                 value={form.description}
                 onChange={set('description')}
                 error={errors.description}
@@ -445,6 +447,7 @@ export default function PromotionsTab(_props: OpsProps) {
               id="promo-discount-type"
               label={t("Discount type")}
               required
+              className="field-sm"
               value={form.discount_type}
               onChange={set('discount_type')}
               error={errors.discount_type}
@@ -457,6 +460,7 @@ export default function PromotionsTab(_props: OpsProps) {
               label={form.discount_type === 'percentage' ? t("Discount (%)") : t("Discount amount (SAR)")}
               required
               inputMode="decimal"
+              className="field-sm"
               value={form.discount_value}
               onChange={set('discount_value')}
               error={errors.discount_value}
@@ -465,6 +469,7 @@ export default function PromotionsTab(_props: OpsProps) {
               id="promo-threshold-type"
               label={t("Threshold based on")}
               required
+              className="field-sm"
               value={form.threshold_type}
               onChange={set('threshold_type')}
               error={errors.threshold_type}
@@ -478,6 +483,7 @@ export default function PromotionsTab(_props: OpsProps) {
               label={t("Threshold value")}
               required
               inputMode="decimal"
+              className="field-sm"
               value={form.threshold_value}
               onChange={set('threshold_value')}
               error={errors.threshold_value}
@@ -585,6 +591,7 @@ export default function PromotionsTab(_props: OpsProps) {
               label={t("Starts at")}
               required
               type="datetime-local"
+              className="field-sm"
               value={form.starts_at}
               onChange={set('starts_at')}
               error={errors.starts_at}
@@ -594,6 +601,7 @@ export default function PromotionsTab(_props: OpsProps) {
               label={t("Expires at")}
               required
               type="datetime-local"
+              className="field-sm"
               value={form.expires_at}
               onChange={set('expires_at')}
               error={errors.expires_at}
